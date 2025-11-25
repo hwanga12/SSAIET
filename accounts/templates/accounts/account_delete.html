@@ -1,0 +1,8 @@
+<h2>정말 계정을 삭제하시겠습니까?</h2>
+
+<form method="POST" action="{% url 'accounts:account_delete' %}">
+    {% csrf_token %}
+    <button type="submit" style="color:red;">네, 삭제합니다</button>
+</form>
+
+<a href="{% url 'accounts:profile' %}">아니요, 취소합니다</a>

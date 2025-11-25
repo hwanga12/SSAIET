@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FitPlan 회원가입</title>
+</head>
+<body>
+    <h1>SSAIET</h1>
+    
+    {% if not user.is_authenticated %}
+    <p>회원가입을 원하시면 아래 버튼을 클릭하세요.</p>
+    <form action="{% url 'accounts:signup' %}" method="GET">
+        <button type="submit">회원가입</button>
+    </form>
+
+    <form action="{% url 'accounts:login' %}" method="GET">
+        <button type="submit">로그인</button>
+    </form>
+{% endif %}
+
+    <!-- 로그인된 사용자일 경우에만 계정 삭제 및 로그아웃 버튼 표시 -->
+    {% if user.is_authenticated %}
+    <!-- 로그아웃 버튼 -->
+    <form action="{% url 'accounts:logout' %}" method="POST">
+        {% csrf_token %}
+        <button type="submit">로그아웃</button>
+    </form>
+
+    <!-- 프로필 페이지 버튼 -->
+    <form action="{% url 'accounts:profile' %}" method="GET">
+        <button type="submit">프로필 페이지</button>
+    </form>
+
+        <!-- 계정 삭제 버튼 -->
+        <form action="{% url 'accounts:delete_confirm' %}" method="GET">
+            {% csrf_token %}
+            <button type="submit" style="color: red;"> 회원 탈퇴 </button>
+        </form>
+    {% else %}
+        <p>로그인하지 않으셨습니다. 로그인 후 계정 삭제나 로그아웃을 할 수 있습니다.</p>
+    {% endif %}
+</body>
+</html>

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>로그인</title>
+</head>
+<body>
+    <h1>로그인</h1>
+
+    <!-- 에러 메시지 전체 -->
+    {% if form.errors %}
+        <div style="color: red; margin-bottom: 10px;">
+            ❗ 로그인 정보가 올바르지 않습니다.
+        </div>
+    {% endif %}
+
+    <form method="POST">
+        {% csrf_token %}
+
+        <!-- 아이디(email) -->
+        <p>
+            {{ form.username.label_tag }}  
+            {{ form.username }}
+        </p>
+
+        <!-- 비밀번호 -->
+        <p>
+            {{ form.password.label_tag }}  
+            {{ form.password }}
+        </p>
+
+        <button type="submit">로그인</button>
+    </form>
+
+    <hr>
+    <p>아직 회원이 아니신가요?</p>
+    <a href="{% url 'accounts:signup' %}">회원가입 하러가기</a>
+
+</body>
+</html>
