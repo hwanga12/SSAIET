@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+
+    <!-- 로그인 상태일 때만 버튼 표시 -->
+    {% if user.is_authenticated %}
+        <nav>
+            <ul>
+                <li><a href="{% url 'account:profile' %}">회원정보 수정</a></li>
+                <li><a href="{% url 'account:logout' %}">로그아웃</a></li>
+            </ul>
+        </nav>
+    {% endif %}
+
+    <!-- 페이지 본문 콘텐츠 -->
+    {% block content %}
+    {% endblock %}
+
+</body>
+</html>
