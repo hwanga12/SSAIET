@@ -1,129 +1,112 @@
-from django.shortcuts import render
-from django.contrib.auth.forms import AuthenticationForm
-from django.shortcuts import render, redirect
-from django.contrib.auth import login as auth_login
-from django.contrib.auth import update_session_auth_hash
-from django.contrib.auth.decorators import login_required
+# accounts/views.py
+
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework import status
+
+from .serializers import (
+    UserCreateSerializer,
+    UserSerializer,
+    ProfileUpdateSerializer
+)
+
 from django.contrib.auth import get_user_model
-from django.contrib.auth import logout as auth_logout
-from .forms import CustomUserCreationForm, WeightSettingsForm,ProfileUpdateForm
 
+User = get_user_model()
 
-def login(request):
-    if request.user.is_authenticated:
-        return redirect('fitplan:index')
-
-    if request.method == 'POST':
-        form = AuthenticationForm(request, request.POST)
-        if form.is_valid():
-            auth_login(request, form.get_user())
-            return redirect('fitplan:index')
-    else:
-        form = AuthenticationForm()
-    context = {
-        'form': form,
-    }
-    return render(request, 'accounts/login.html', context)
-
-
-@login_required
-def logout(request):
-    auth_logout(request)
-    return redirect('fitplan:index')
-
-
+# -------------------------
+# 회원가입 (제한 없음)
+# -------------------------
+@api_view(['POST'])
 def signup(request):
-    if request.user.is_authenticated:
-        return redirect('fitplan:index')
+    serializer = UserCreateSerializer(data=request.data)
 
-    if request.method == 'POST':
-        form = CustomUserCreationForm(request.POST)
-        if form.is_valid():
-            user = form.save()
-            auth_login(request, user)
-            return redirect('accounts:weight_settings')
-    else:
-        form = CustomUserCreationForm()
-    context = {
-        'form': form,
-    }
-    return render(request, 'accounts/signup.html', context)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-@login_required
-def account_delete(request):
-    if request.method == "POST":
-        request.user.delete()
-        return redirect('fitplan:index')
-    return redirect('accounts:delete_confirm')
+# -------------------------
+# 내 정보 조회 (제한 없음)
+# -------------------------
+@api_view(['GET'])
+def me(request):
+    return Response(UserSerializer(request.user).data)
 
-@login_required
-def delete_confirm(request):
-    return render(request, 'accounts/account_delete.html')
 
-@login_required
-def profile_update(request):
+# -------------------------
+# 전체 프로필 수정 (제한 없음)
+# -------------------------
+@api_view(['PUT'])
+def update_profile(request):
     user = request.user
+    serializer = ProfileUpdateSerializer(user, data=request.data)
 
-    if request.method == "POST":
-        form = ProfileUpdateForm(request.POST, instance=user)
-        if form.is_valid():
-            form.save()
-            return redirect('accounts:profile')
-    else:
-        form = ProfileUpdateForm(instance=user)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
-    context = {
-        'form': form,
-    }
-    return render(request, 'accounts/account_edit.html', context)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-@login_required
-def profile(request):
-    return render(request, 'accounts/profile.html')
-
-
-@login_required
-def weight_settings(request):
+# -------------------------
+# weight settings 일부 수정 (PATCH)
+# -------------------------
+@api_view(['PATCH'])
+def update_weight_settings(request):
     user = request.user
-    if request.method == 'POST':
-        form = WeightSettingsForm(request.POST, instance=user)
-        if form.is_valid():
-            form.save() 
-            return redirect('fitplan:index')
-    else:
-        form = WeightSettingsForm()
-    context = {
-        'form': form
-    }
-    return render(request, 'accounts/weight_settings.html', context)
+    serializer = ProfileUpdateSerializer(
+        user,
+        data=request.data,
+        partial=True
+    )
 
-from django.contrib.auth.forms import PasswordChangeForm
-from .forms import AccountUpdateForm
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
-@login_required
-def account_edit(request):
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# -------------------------
+# 비밀번호 변경 (제한 없음)
+# -------------------------
+@api_view(['PUT'])
+def change_password(request):
     user = request.user
+    new_pw = request.data.get("password")
 
-    if request.method == "POST":
-        form = AccountUpdateForm(request.POST, instance=user)
-        pw_form = PasswordChangeForm(user, request.POST)
+    if not new_pw:
+        return Response(
+            {"error": "password required"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
-        # 아이디/이메일 정상 + 비밀번호 변경도 정상
-        if form.is_valid() and pw_form.is_valid():
-            form.save()
-            pw_form.save()
-            update_session_auth_hash(request, user)  # 비밀번호 바꿔도 로그인 유지
+    user.set_password(new_pw)
+    user.save()
 
-            return redirect('accounts:profile')
+    return Response(
+        {"message": "password updated"},
+        status=status.HTTP_200_OK
+    )
+# -------------------------
+# 계정 삭제 (DELETE)
+# -------------------------
+@api_view(['DELETE'])
+def delete_account(request):
+    user = request.user
+    
+    # 익명 사용자라도 테스트 위해 그냥 진행
+    if user.is_anonymous:
+        return Response(
+            {"error": "anonymous user cannot be deleted"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
-    else:
-        form = AccountUpdateForm(instance=user)
-        pw_form = PasswordChangeForm(user)
-
-    context = {
-        'form': form,
-        'pw_form': pw_form,
-    }
-    return render(request, 'accounts/account_edit.html', context)
+    user.delete()
+    return Response(
+        {"message": "Account deleted successfully"},
+        status=status.HTTP_200_OK
+    )
