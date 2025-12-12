@@ -5,8 +5,8 @@ from datetime import date
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
-from .models import Meal, Food, MealFood
-
+from .models import Meal, Food, MealFood, UserSelectedMeal, DinnerRecommendation
+from django.conf import settings
 
 @csrf_exempt
 def save_meal_data(request):
@@ -109,7 +109,10 @@ def save_meal_data(request):
             continue
 
         idx = result["mealIndex"]
-        meal_data = meals[idx]
+        meal_data = meals[idx]  # meals: API에서 받아온 원본 메뉴 데이터
+
+         # nutritionData로 p-score 계산
+        p_score = calculate_p_score(result["nutritionData"])
 
         meal = Meal.objects.create(
             date=meal_data["date"],
@@ -117,6 +120,8 @@ def save_meal_data(request):
             restaurant=meal_data["restaurantData"]["name"],
             course_type=meal_data["menuCourseName"][0],
             meal_name=result["mealName"],
+            subMenuTxt=meal_data["subMenuTxt"],
+             p_score=p_score
         )
 
         for food_data in result["nutritionData"]:
@@ -146,4 +151,191 @@ def save_meal_data(request):
         "saved_meals": save_count,
         "date": date_value,
         "mealTimeId": meal_time_id
+    })
+
+
+def calculate_p_score(nutrition_list):
+    kcal = sum(n["calorie"] for n in nutrition_list)
+    protein = sum(n["protein"] for n in nutrition_list)
+    fat = sum(n["fat"] for n in nutrition_list)
+    carbs = sum(n["carbohydrate"] for n in nutrition_list)
+
+    score = 0
+    if 500 <= kcal <= 800:
+        score += 40
+    else:
+        score += max(5, 40 - abs(650 - kcal) * 0.1)
+
+    ratio = protein / (carbs + fat + 1)
+    if 0.25 <= ratio <= 0.4:
+        score += 40
+
+    if fat < 20:
+        score += 20
+
+    return round(score, 1)
+
+
+
+### 유저 있는 테스트 버전
+# @csrf_exempt
+# def recommend_dinner(request):
+
+#     data = json.loads(request.body or "{}")
+#     user_id = data["user_id"]
+#     selected_meal_id = data["meal_id"]
+
+#     user = User.objects.get(id=user_id)
+#     lunch = Meal.objects.get(id=selected_meal_id)
+
+#     # 영양성분 합계
+#     foods = lunch.mealfood_set.select_related("food")
+#     total_nutrition = {
+#         "calorie": sum(f.food.calorie for f in foods),
+#         "carbs": sum(f.food.carbohydrate for f in foods),
+#         "protein": sum(f.food.protein for f in foods),
+#         "fat": sum(f.food.fat for f in foods),
+#     }
+
+#     # GPT에 넘길 prompt
+#     prompt = f"""
+# 당신은 개인 맞춤 식단 전문가입니다.
+
+# [사용자 정보]
+# - 키: {user.height}
+# - 몸무게: {user.weight}
+# - 알러지: {user.allergy}
+# - 목표 체중: {user.target_weight}
+
+# [오늘 점심 메뉴]
+# - 메뉴명: {lunch.meal_name}
+# - 구성: {lunch.subMenuTxt}
+# - P-Score: {lunch.p_score}
+
+# [점심 영양 성분]
+# - 칼로리: {total_nutrition['calorie']}
+# - 탄수화물: {total_nutrition['carbs']}
+# - 단백질: {total_nutrition['protein']}
+# - 지방: {total_nutrition['fat']}
+
+# 위 정보를 고려하여 **저녁 식단 1개를 추천**하고,
+# 그 이유를 상세히 설명해주세요.
+
+# 응답 형식:
+# {
+#   "menu": "추천 저녁 메뉴 한 줄",
+#   "reason": "추천 이유"
+# }
+# """
+
+#     url = "https://gms.ssafy.io/gmsapi/api.openai.com/v1/chat/completions"
+
+#     body = {
+#         "model": "gpt-5-nano",
+#         "messages": [
+#             {"role": "developer", "content": "Answer in Korean"},
+#             {"role": "user", "content": prompt}
+#         ]
+#     }
+
+#     headers = {
+#         "Content-Type": "application/json",
+#         "Authorization": f"Bearer {YOUR_GMS_KEY}"
+#     }
+
+#     gpt_res = requests.post(url, json=body, headers=headers).json()
+#     ai_raw = gpt_res["choices"][0]["message"]["content"]
+
+#     ai_json = json.loads(ai_raw)
+
+#     # DB 저장
+#     dinner = DinnerRecommendation.objects.create(
+#         user_id=user_id,
+#         selected_lunch_id=selected_meal_id,
+#         ai_menu_name=ai_json["menu"],
+#         ai_reason_text=ai_json["reason"],
+#         ai_response_json=json.dumps(ai_json),
+#         p_score=lunch.p_score
+#     )
+
+#     return JsonResponse({
+#         "success": True,
+#         "dinner_id": dinner.id,
+#         "ai_menu": ai_json["menu"],
+#         "reason": ai_json["reason"]
+#     })
+
+
+
+
+@csrf_exempt
+def recommend_dinner(request):
+
+    data = json.loads(request.body or "{}")
+    selected_meal_id = data["meal_id"]
+
+    lunch = Meal.objects.get(id=selected_meal_id)
+
+    foods = lunch.mealfood_set.select_related("food")
+    total_nutrition = {
+        "calorie": sum(f.food.calorie for f in foods),
+        "carbs": sum(f.food.carbohydrate for f in foods),
+        "protein": sum(f.food.protein for f in foods),
+        "fat": sum(f.food.fat for f in foods),
+    }
+
+    prompt = f"""
+다음 점심에 기반하여 저녁 메뉴 1개를 추천하고 이유를 설명해줘.
+
+[점심]
+- 메뉴명: {lunch.meal_name}
+- 구성: {lunch.subMenuTxt}
+- P-Score: {lunch.p_score}
+
+[영양성분]
+- 칼로리: {total_nutrition['calorie']}
+- 탄수화물: {total_nutrition['carbs']}
+- 단백질: {total_nutrition['protein']}
+- 지방: {total_nutrition['fat']}
+
+JSON으로 응답:
+
+{{
+  "menu": "추천 메뉴",
+  "reason": "추천 이유"
+}}
+"""
+
+    url = "https://gms.ssafy.io/gmsapi/api.openai.com/v1/chat/completions"
+
+    body = {
+        "model": "gpt-5-nano",
+        "messages": [
+            {"role": "developer", "content": "Answer in Korean"},
+            {"role": "user", "content": prompt}
+        ]
+    }
+
+    headers = {
+    "Content-Type": "application/json",
+    "Authorization": f"Bearer {settings.GMS_KEY}"
+    }
+
+    gpt_res = requests.post(url, json=body, headers=headers).json()
+    ai_raw = gpt_res["choices"][0]["message"]["content"]
+    ai_json = json.loads(ai_raw)
+
+    dinner = DinnerRecommendation.objects.create(
+        selected_lunch=lunch,
+        ai_menu_name=ai_json.get("menu"),
+        ai_reason_text=ai_json.get("reason"),
+        ai_response_json=json.dumps(ai_json),
+        p_score=lunch.p_score
+    )
+
+    return JsonResponse({
+        "success": True,
+        "dinner_id": dinner.id,
+        "menu": ai_json["menu"],
+        "reason": ai_json["reason"]
     })
