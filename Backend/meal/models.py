@@ -1,4 +1,5 @@
 from django.db import models
+from django.conf import settings
 
 # Create your models here.
 # models.py
@@ -40,16 +41,25 @@ class MealFood(models.Model):
 
 
 class UserSelectedMeal(models.Model):
-    # user = models.ForeignKey(User, on_delete=models.CASCADE)  # 일단 제거
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     meal = models.ForeignKey(Meal, on_delete=models.CASCADE)
     selected_at = models.DateTimeField(auto_now_add=True)
 
 
 class DinnerRecommendation(models.Model):
-    # user = models.ForeignKey(User, on_delete=models.CASCADE)  # 일단 제거
-    selected_lunch = models.ForeignKey(Meal, on_delete=models.CASCADE)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE
+    )
+    user_selected_meal = models.ForeignKey(
+        UserSelectedMeal,
+        on_delete=models.CASCADE,
+        related_name="dinner_recommendations"
+    )
 
     ai_menu_name = models.CharField(max_length=255, null=True, blank=True)
     ai_reason_text = models.TextField(null=True, blank=True)
     ai_response_json = models.TextField(null=True, blank=True)
     p_score = models.FloatField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+

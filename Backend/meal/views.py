@@ -7,6 +7,12 @@ from django.views.decorators.csrf import csrf_exempt
 
 from .models import Meal, Food, MealFood, UserSelectedMeal, DinnerRecommendation
 from django.conf import settings
+from django.contrib.auth import get_user_model
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+User = get_user_model()
 
 @csrf_exempt
 def save_meal_data(request):
@@ -121,7 +127,7 @@ def save_meal_data(request):
             course_type=meal_data["menuCourseName"][0],
             meal_name=result["mealName"],
             subMenuTxt=meal_data["subMenuTxt"],
-             p_score=p_score
+            p_score=p_score
         )
 
         for food_data in result["nutritionData"]:
@@ -177,105 +183,21 @@ def calculate_p_score(nutrition_list):
 
 
 
-### 유저 있는 테스트 버전
-# @csrf_exempt
-# def recommend_dinner(request):
-
-#     data = json.loads(request.body or "{}")
-#     user_id = data["user_id"]
-#     selected_meal_id = data["meal_id"]
-
-#     user = User.objects.get(id=user_id)
-#     lunch = Meal.objects.get(id=selected_meal_id)
-
-#     # 영양성분 합계
-#     foods = lunch.mealfood_set.select_related("food")
-#     total_nutrition = {
-#         "calorie": sum(f.food.calorie for f in foods),
-#         "carbs": sum(f.food.carbohydrate for f in foods),
-#         "protein": sum(f.food.protein for f in foods),
-#         "fat": sum(f.food.fat for f in foods),
-#     }
-
-#     # GPT에 넘길 prompt
-#     prompt = f"""
-# 당신은 개인 맞춤 식단 전문가입니다.
-
-# [사용자 정보]
-# - 키: {user.height}
-# - 몸무게: {user.weight}
-# - 알러지: {user.allergy}
-# - 목표 체중: {user.target_weight}
-
-# [오늘 점심 메뉴]
-# - 메뉴명: {lunch.meal_name}
-# - 구성: {lunch.subMenuTxt}
-# - P-Score: {lunch.p_score}
-
-# [점심 영양 성분]
-# - 칼로리: {total_nutrition['calorie']}
-# - 탄수화물: {total_nutrition['carbs']}
-# - 단백질: {total_nutrition['protein']}
-# - 지방: {total_nutrition['fat']}
-
-# 위 정보를 고려하여 **저녁 식단 1개를 추천**하고,
-# 그 이유를 상세히 설명해주세요.
-
-# 응답 형식:
-# {
-#   "menu": "추천 저녁 메뉴 한 줄",
-#   "reason": "추천 이유"
-# }
-# """
-
-#     url = "https://gms.ssafy.io/gmsapi/api.openai.com/v1/chat/completions"
-
-#     body = {
-#         "model": "gpt-5-nano",
-#         "messages": [
-#             {"role": "developer", "content": "Answer in Korean"},
-#             {"role": "user", "content": prompt}
-#         ]
-#     }
-
-#     headers = {
-#         "Content-Type": "application/json",
-#         "Authorization": f"Bearer {YOUR_GMS_KEY}"
-#     }
-
-#     gpt_res = requests.post(url, json=body, headers=headers).json()
-#     ai_raw = gpt_res["choices"][0]["message"]["content"]
-
-#     ai_json = json.loads(ai_raw)
-
-#     # DB 저장
-#     dinner = DinnerRecommendation.objects.create(
-#         user_id=user_id,
-#         selected_lunch_id=selected_meal_id,
-#         ai_menu_name=ai_json["menu"],
-#         ai_reason_text=ai_json["reason"],
-#         ai_response_json=json.dumps(ai_json),
-#         p_score=lunch.p_score
-#     )
-
-#     return JsonResponse({
-#         "success": True,
-#         "dinner_id": dinner.id,
-#         "ai_menu": ai_json["menu"],
-#         "reason": ai_json["reason"]
-#     })
-
-
-
-
-@csrf_exempt
+## 유저 있는 테스트 버전
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def recommend_dinner(request):
+    user = request.user
+    usm_id = request.data.get("user_selected_meal_id")
 
-    data = json.loads(request.body or "{}")
-    selected_meal_id = data["meal_id"]
+    user_selected_meal = UserSelectedMeal.objects.get(
+        id=usm_id,
+        user=user
+    )
 
-    lunch = Meal.objects.get(id=selected_meal_id)
+    lunch = user_selected_meal.meal
 
+    # 영양성분 합계
     foods = lunch.mealfood_set.select_related("food")
     total_nutrition = {
         "calorie": sum(f.food.calorie for f in foods),
@@ -284,24 +206,38 @@ def recommend_dinner(request):
         "fat": sum(f.food.fat for f in foods),
     }
 
+    # GPT에 넘길 prompt
     prompt = f"""
-다음 점심에 기반하여 저녁 메뉴 1개를 추천하고 이유를 설명해줘.
+당신은 개인 맞춤 식단 전문가입니다.
 
-[점심]
+[사용자 정보]
+- 키: {user.height}
+- 몸무게: {user.current_weight}
+- 알러지: {user.allergies}
+- 목표 체중: {user.target_weight}
+- 근육량: {user.muscle_mass}
+- 피트: {user.body_fat}
+- 나이: {user.age}
+- 성별: {user.gender}
+
+[사용자가 선택한 점심]
+- 선택 시각: {user_selected_meal.selected_at}
 - 메뉴명: {lunch.meal_name}
 - 구성: {lunch.subMenuTxt}
 - P-Score: {lunch.p_score}
 
-[영양성분]
+[점심 영양 성분]
 - 칼로리: {total_nutrition['calorie']}
 - 탄수화물: {total_nutrition['carbs']}
 - 단백질: {total_nutrition['protein']}
 - 지방: {total_nutrition['fat']}
 
-JSON으로 응답:
+위 정보를 고려하여 **저녁 식단 1개를 추천**하고,
+왜 그 메뉴를 추천하는지 점심 식단과 사용자 정보를 이유로 상세히 설명해주세요.
 
+응답 형식:
 {{
-  "menu": "추천 메뉴",
+  "menu": "추천 저녁 메뉴 한 줄",
   "reason": "추천 이유"
 }}
 """
@@ -317,18 +253,21 @@ JSON으로 응답:
     }
 
     headers = {
-    "Content-Type": "application/json",
-    "Authorization": f"Bearer {settings.GMS_KEY}"
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {settings.GMS_KEY}"
     }
 
     gpt_res = requests.post(url, json=body, headers=headers).json()
     ai_raw = gpt_res["choices"][0]["message"]["content"]
+
     ai_json = json.loads(ai_raw)
 
+    # DB 저장
     dinner = DinnerRecommendation.objects.create(
-        selected_lunch=lunch,
-        ai_menu_name=ai_json.get("menu"),
-        ai_reason_text=ai_json.get("reason"),
+        user=user,
+        user_selected_meal=user_selected_meal,
+        ai_menu_name=ai_json["menu"],
+        ai_reason_text=ai_json["reason"],
         ai_response_json=json.dumps(ai_json),
         p_score=lunch.p_score
     )
@@ -336,6 +275,103 @@ JSON으로 응답:
     return JsonResponse({
         "success": True,
         "dinner_id": dinner.id,
-        "menu": ai_json["menu"],
+        "ai_menu": ai_json["menu"],
         "reason": ai_json["reason"]
     })
+
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def select_meal(request):
+    user = request.user
+    meal_id = request.data.get("meal_id")
+
+    if not meal_id:
+        return Response({"error": "meal_id required"}, status=400)
+
+    meal = Meal.objects.get(id=meal_id)
+
+    usm = UserSelectedMeal.objects.create(
+        user=user,
+        meal=meal
+    )
+
+    return Response({
+        "success": True,
+        "user_selected_meal_id": usm.id
+    })
+
+
+
+# @csrf_exempt
+# def recommend_dinner(request):
+
+#     data = json.loads(request.body or "{}")
+#     selected_meal_id = data["meal_id"]
+
+#     lunch = Meal.objects.get(id=selected_meal_id)
+
+#     foods = lunch.mealfood_set.select_related("food")
+#     total_nutrition = {
+#         "calorie": sum(f.food.calorie for f in foods),
+#         "carbs": sum(f.food.carbohydrate for f in foods),
+#         "protein": sum(f.food.protein for f in foods),
+#         "fat": sum(f.food.fat for f in foods),
+#     }
+
+#     prompt = f"""
+# 다음 점심에 기반하여 저녁 메뉴 1개를 추천하고 이유를 설명해줘.
+
+# [점심]
+# - 메뉴명: {lunch.meal_name}
+# - 구성: {lunch.subMenuTxt}
+# - P-Score: {lunch.p_score}
+
+# [영양성분]
+# - 칼로리: {total_nutrition['calorie']}
+# - 탄수화물: {total_nutrition['carbs']}
+# - 단백질: {total_nutrition['protein']}
+# - 지방: {total_nutrition['fat']}
+
+# JSON으로 응답:
+
+# {{
+#   "menu": "추천 메뉴",
+#   "reason": "추천 이유"
+# }}
+# """
+
+#     url = "https://gms.ssafy.io/gmsapi/api.openai.com/v1/chat/completions"
+
+#     body = {
+#         "model": "gpt-5-nano",
+#         "messages": [
+#             {"role": "developer", "content": "Answer in Korean"},
+#             {"role": "user", "content": prompt}
+#         ]
+#     }
+
+#     headers = {
+#     "Content-Type": "application/json",
+#     "Authorization": f"Bearer {settings.GMS_KEY}"
+#     }
+
+#     gpt_res = requests.post(url, json=body, headers=headers).json()
+#     ai_raw = gpt_res["choices"][0]["message"]["content"]
+#     ai_json = json.loads(ai_raw)
+
+#     dinner = DinnerRecommendation.objects.create(
+#         selected_lunch=lunch,
+#         ai_menu_name=ai_json.get("menu"),
+#         ai_reason_text=ai_json.get("reason"),
+#         ai_response_json=json.dumps(ai_json),
+#         p_score=lunch.p_score
+#     )
+
+#     return JsonResponse({
+#         "success": True,
+#         "dinner_id": dinner.id,
+#         "menu": ai_json["menu"],
+#         "reason": ai_json["reason"]
+#     })
