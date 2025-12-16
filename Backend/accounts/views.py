@@ -38,6 +38,7 @@ def signup(request):
 # 내 정보 조회 (제한 없음)
 # -------------------------
 @api_view(['GET'])
+@permission_classes([IsAuthenticated]) 
 def me(request):
     return Response(UserSerializer(request.user).data)
 
