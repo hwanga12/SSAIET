@@ -42,6 +42,9 @@ def save_meal_data(request):
             result.append({
                 "meal_name": meal.meal_name,
                 "course_type": meal.course_type,
+                "subMenuTxt": meal.subMenuTxt,   # ✅ 추가
+                "photoUrl": meal.photoUrl, 
+                "p_score": meal.p_score,  
                 "foods": [
                     {
                         "name": mf.food.name,
@@ -127,6 +130,7 @@ def save_meal_data(request):
             course_type=meal_data["menuCourseName"][0],
             meal_name=result["mealName"],
             subMenuTxt=meal_data["subMenuTxt"],
+            photoUrl = meal_data["photoUrl"],
             p_score=p_score
         )
 

@@ -11,6 +11,7 @@ class Meal(models.Model):
     meal_name = models.CharField(max_length=200)
     subMenuTxt = models.TextField(null=True, blank=True)
     p_score = models.IntegerField(default=0)
+    photoUrl = models.TextField(null=True, blank=True)
 
 
 

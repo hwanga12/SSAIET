@@ -2,13 +2,14 @@
   <div>
     <!-- 🔥 Navbar (항상 보임) -->
     <BaseNavbar />
-
+    
     <!-- 🔥 로그인한 사용자 -->
     <HeroSection
       v-if="authStore.isLoggedIn"
       :userName="authStore.user?.name || '사용자'"
       :imageSrc="heroImage"
     />
+    
 
     <!-- 🔥 비로그인 사용자 -->
     <section v-else class="guest-section">
@@ -21,6 +22,7 @@
         <button @click="router.push('/signup')">회원가입</button>
       </div>
     </section>
+    <MealSection />
   </div>
 </template>
 
@@ -33,6 +35,8 @@ import HeroSection from "@/components/common/HeroSection.vue"
 
 // 🔹 이미지 import (중요)
 import heroImage from "@/assets/ssafy_study.png"
+
+import MealSection from "@/components/meal/MealSection.vue"
 
 const authStore = useAuthStore()
 const router = useRouter()
