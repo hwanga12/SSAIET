@@ -21,9 +21,9 @@
           똑똑한 건강 관리 파트너입니다.
         </p>
 
-        <button class="hero-btn">
+        <!-- <button class="hero-btn">
           오늘 식단 추천 받기
-        </button>
+        </button> -->
       </div>
 
     </div>

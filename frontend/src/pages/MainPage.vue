@@ -5,13 +5,13 @@
 
     <!-- 🔥 로그인한 사용자 -->
     <HeroSection
-      v-if="authStore.isLoggedIn"
+      
       :userName="authStore.user?.name || '사용자'"
       :imageSrc="heroImage"
     />
 
     <!-- 🔥 비로그인 사용자 -->
-    <section v-else class="guest-section">
+    <!-- <section v-else class="guest-section">
       <p class="guest-text">
         로그인하면 개인 맞춤 기능을 사용할 수 있어요!
       </p>
@@ -20,7 +20,7 @@
         <button @click="router.push('/login')">로그인</button>
         <button @click="router.push('/signup')">회원가입</button>
       </div>
-    </section>
+    </section> -->
   </div>
 </template>
 

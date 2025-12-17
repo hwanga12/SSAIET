@@ -9,14 +9,21 @@
       />
     </div>
 
-    <!-- 🔥 오른쪽: 로그인한 사용자만 -->
+    <!-- 🔥 로그인한 사용자 -->
     <nav class="navbar-right" v-if="authStore.isLoggedIn">
       <button @click="goProfile">내 프로필</button>
       <button @click="goSettings">계정 설정</button>
       <button class="logout" @click="logout">로그아웃</button>
     </nav>
+
+    <!-- 🔥 비로그인 사용자 -->
+    <nav class="navbar-right" v-else>
+      <button @click="goLogin">로그인</button>
+      <button @click="goSignup">회원가입</button>
+    </nav>
   </header>
 </template>
+
 
 <script setup>
 import { useRouter } from "vue-router"
@@ -44,6 +51,15 @@ const logout = () => {
   authStore.logOut()
   router.replace("/")
 }
+
+const goLogin = () => {
+  router.push("/login")
+}
+
+const goSignup = () => {
+  router.push("/signup")
+}
+
 </script>
 
 <style scoped>
