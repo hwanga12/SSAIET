@@ -9,6 +9,7 @@
       :userName="authStore.user?.name || '사용자'"
       :imageSrc="heroImage"
     />
+    <MealSection />
     
 
     <!-- 🔥 비로그인 사용자 -->
