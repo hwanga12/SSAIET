@@ -27,20 +27,6 @@
       </nav>
     </div>
 
-<<<<<<< HEAD
-    <!-- 🔥 로그인한 사용자 -->
-    <nav class="navbar-right" v-if="authStore.isLoggedIn">
-      <button @click="goProfile">내 프로필</button>
-      <button @click="goSettings">계정 설정</button>
-      <button class="logout" @click="logout">로그아웃</button>
-    </nav>
-
-    <!-- 🔥 비로그인 사용자 -->
-    <nav class="navbar-right" v-else>
-      <button @click="goLogin">로그인</button>
-      <button @click="goSignup">회원가입</button>
-    </nav>
-=======
     <div class="navbar-right">
       <template v-if="!authStore.isLoggedIn">
         <button class="btn ghost" @click="goLogin">로그인</button>
@@ -92,7 +78,6 @@
         </div>
       </template>
     </div>
->>>>>>> FE_Mainpage_Herosection&Navbar
   </header>
 </template>
 
@@ -136,23 +121,12 @@ const logout = () => {
   router.replace("/")
 }
 
-<<<<<<< HEAD
-const goLogin = () => {
-  router.push("/login")
-}
-
-const goSignup = () => {
-  router.push("/signup")
-}
-
-=======
 const withdraw = async () => {
   if (!confirm("정말 회원탈퇴 하시겠습니까?")) return
   await authStore.withdraw()
   alert("그동안 이용해주셔서 감사합니다. 🌱")
   router.replace("/")
 }
->>>>>>> FE_Mainpage_Herosection&Navbar
 </script>
 
 <style scoped>

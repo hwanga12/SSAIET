@@ -1,24 +1,4 @@
 <template>
-<<<<<<< HEAD
-  <div>
-    <!-- 🔥 Navbar (항상 보임) -->
-    <BaseNavbar />
-    
-    <!-- 🔥 로그인한 사용자 -->
-    <HeroSection
-      
-      :userName="authStore.user?.name || '사용자'"
-      :imageSrc="heroImage"
-    />
-    <MealSection />
-    
-
-    <!-- 🔥 비로그인 사용자 -->
-    <!-- <section v-else class="guest-section">
-      <p class="guest-text">
-        로그인하면 개인 맞춤 기능을 사용할 수 있어요!
-      </p>
-=======
   <div class="main-layout">
     <BaseNavbar class="fixed-navbar" />
 
@@ -41,7 +21,6 @@
           <MealSection />
         </div>
       </Transition>
->>>>>>> FE_Mainpage_Herosection&Navbar
 
       <Transition name="section-fade">
         <section v-if="!authStore.isLoggedIn" class="preview-section">
@@ -60,11 +39,7 @@
         <img src="@/assets/SSAIET_LOGO.png" alt="SSAIET" class="footer-logo" />
         <p>&copy; 2025 SSAIET. All rights reserved for SSAFY Students.</p>
       </div>
-<<<<<<< HEAD
-    </section> -->
-=======
     </footer>
->>>>>>> FE_Mainpage_Herosection&Navbar
   </div>
 </template>
 

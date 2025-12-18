@@ -64,28 +64,6 @@
         </div>
 
       </div>
-<<<<<<< HEAD
-
-      <!-- 텍스트 -->
-      <div class="hero-left">
-        <h1 class="hero-title">
-          SSAFY생을 위한 플래너<br />
-          <span class="hero-title-accent">SSAIET</span> 입니다
-        </h1>
-
-        <p class="hero-desc">
-          {{ userName }}님 환영합니다.<br />
-          건강한 SSAFY 생활을 위해 만들어진<br />
-          똑똑한 건강 관리 파트너입니다.
-        </p>
-
-        <!-- <button class="hero-btn">
-          오늘 식단 추천 받기
-        </button> -->
-      </div>
-
-=======
->>>>>>> FE_Mainpage_Herosection&Navbar
     </div>
   </section>
 </template>
