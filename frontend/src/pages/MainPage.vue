@@ -50,10 +50,7 @@ import { useRouter } from "vue-router"
 import BaseNavbar from "@/components/common/BaseNavbar.vue"
 import HeroSection from "@/components/common/HeroSection.vue"
 import MealSection from "@/components/meal/MealSection.vue"
-
 import heroImage from "@/assets/ssafy_study.png"
-
-import MealSection from "@/components/meal/MealSection.vue"
 
 const authStore = useAuthStore()
 const router = useRouter()
