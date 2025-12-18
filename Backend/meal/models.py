@@ -63,4 +63,3 @@ class DinnerRecommendation(models.Model):
     ai_response_json = models.TextField(null=True, blank=True)
     p_score = models.FloatField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
-

@@ -1,11 +1,10 @@
 # accounts/serializers.py
 from rest_framework import serializers
 from .models import User
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
+from rest_framework import serializers
 
-
-# ============================================================
-# 1) 회원가입용 Serializer (UserCreateSerializer)
-# ============================================================
 class UserCreateSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
 
@@ -15,14 +14,23 @@ class UserCreateSerializer(serializers.ModelSerializer):
             'username',
             'email',
             'password',
-            'name',                # 🔥 name 추가
+            'name',
         ]
+
+    # 🔥 여기 추가 (핵심)
+    def validate_password(self, value):
+        try:
+            validate_password(value)
+        except ValidationError as e:
+            # Django ValidationError → DRF ValidationError로 변환
+            raise serializers.ValidationError(e.messages)
+        return value
 
     def create(self, validated_data):
         user = User(
             username=validated_data['username'],
             email=validated_data['email'],
-            name=validated_data.get('name'),   # 🔥 name 저장
+            name=validated_data.get('name'),
         )
         user.set_password(validated_data['password'])
         user.save()
@@ -76,8 +84,11 @@ class AccountUpdateSerializer(serializers.ModelSerializer):
         model = User
         fields = ['username', 'email', 'password']
 
-    def update(self, instance, validated_data):
+    def validate_password(self, value):
+        validate_password(value)
+        return value
 
+    def update(self, instance, validated_data):
         if 'username' in validated_data:
             instance.username = validated_data['username']
 
