@@ -11,6 +11,7 @@ class Meal(models.Model):
     meal_name = models.CharField(max_length=200)
     subMenuTxt = models.TextField(null=True, blank=True)
     p_score = models.IntegerField(default=0)
+    photoUrl = models.URLField(null=True, blank=True)
 
 
 
@@ -62,4 +63,3 @@ class DinnerRecommendation(models.Model):
     ai_response_json = models.TextField(null=True, blank=True)
     p_score = models.FloatField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
-

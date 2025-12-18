@@ -22,143 +22,127 @@ def save_meal_data(request):
 
     data = json.loads(request.body or "{}")
 
-    # 날짜 없으면 오늘 날짜 자동 사용
     date_value = data.get("date", date.today().strftime("%Y%m%d"))
     meal_time_id = data.get("mealTimeId", "2")
 
     # =========================
-    # 1. 이미 DB에 있다면 바로 반환
+    # 1. DB에 없으면 외부 API 호출 + 저장
     # =========================
-    if Meal.objects.filter(date=date_value, meal_time=meal_time_id).exists():
+    if not Meal.objects.filter(date=date_value, meal_time=meal_time_id).exists():
 
-        meals = Meal.objects.filter(
-            date=date_value,
-            meal_time=meal_time_id
-        )
+        meals_url = "https://welplan.pmh.codes/api/restaurants/meals"
 
-        result = []
-        for meal in meals:
-            foods = meal.mealfood_set.select_related("food")
-            result.append({
-                "meal_name": meal.meal_name,
-                "course_type": meal.course_type,
-                "foods": [
-                    {
-                        "name": mf.food.name,
-                        "calorie": mf.food.calorie,
-                        "carbohydrate": mf.food.carbohydrate,
-                        "protein": mf.food.protein,
-                        "fat": mf.food.fat,
-                        "sugar": mf.food.sugar,
-                        "fiber": mf.food.fiber,
-                        "is_main": mf.is_main
-                    }
-                    for mf in foods
-                ]
-            })
-
-        return JsonResponse({
-            "success": True,
-            "source": "DB",
+        body = {
+            "restaurantData": {
+                "id": "REST000133",
+                "name": "멀티캠퍼스",
+                "description": "멀티캠퍼스|SDS|삼성|에스디에스"
+            },
             "date": date_value,
             "mealTimeId": meal_time_id,
-            "data": result
-        })
+            "sessionId": "default"
+        }
+
+        meal_res = requests.post(meals_url, json=body).json()
+
+        if "meals" not in meal_res:
+            return JsonResponse({"success": False, "error": "No meals data"}, status=400)
+
+        meals = [
+            m for m in meal_res["meals"]
+            if m["menuCourseName"][0] in ["A", "B"]
+        ]
+
+        nutrition_url = "https://welplan.pmh.codes/api/meals/nutrition/bulk"
+        nutrition_body = {
+            "mealsData": meals,
+            "sessionId": "default"
+        }
+
+        nutrition_res = requests.post(nutrition_url, json=nutrition_body).json()
+
+        if "results" not in nutrition_res:
+            return JsonResponse({"success": False, "error": "No nutrition results"}, status=400)
+
+        # 🔥 DB 저장
+        for result in nutrition_res["results"]:
+
+            if not result.get("success"):
+                continue
+
+            idx = result["mealIndex"]
+            meal_data = meals[idx]
+
+            p_score = calculate_p_score(result["nutritionData"])
+
+            meal = Meal.objects.create(
+                date=meal_data["date"],
+                meal_time=meal_data["mealTimeId"],
+                restaurant=meal_data["restaurantData"]["name"],
+                course_type=meal_data["menuCourseName"][0],
+                meal_name=result["mealName"],
+                subMenuTxt=meal_data["subMenuTxt"],
+                photoUrl=meal_data["photoUrl"],
+                p_score=p_score
+            )
+
+            for food_data in result["nutritionData"]:
+                food, _ = Food.objects.get_or_create(
+                    name=food_data["name"],
+                    defaults={
+                        "calorie": food_data["calorie"],
+                        "carbohydrate": food_data["carbohydrate"],
+                        "protein": food_data["protein"],
+                        "fat": food_data["fat"],
+                        "sugar": food_data["sugar"],
+                        "fiber": food_data["fiber"],
+                    }
+                )
+
+                MealFood.objects.create(
+                    meal=meal,
+                    food=food,
+                    is_main=food_data["isMain"]
+                )
 
     # =========================
-    # 2. 없으면 외부 API 호출
+    # 2. 🔥 항상 여기서 DB 조회 후 응답
     # =========================
+    meals = Meal.objects.filter(
+        date=date_value,
+        meal_time=meal_time_id
+    )
 
-    meals_url = "https://welplan.pmh.codes/api/restaurants/meals"
-
-    body = {
-        "restaurantData": {
-            "id": "REST000133",
-            "name": "멀티캠퍼스",
-            "description": "멀티캠퍼스|SDS|삼성|에스디에스"
-        },
-        "date": date_value,
-        "mealTimeId": meal_time_id,
-        "sessionId": "default"
-    }
-
-    meal_res = requests.post(meals_url, json=body).json()
-
-    if "meals" not in meal_res:
-        return JsonResponse({"success": False, "error": "No meals data"}, status=400)
-
-    # A/B 코스만 필터링
-    meals = [
-        m for m in meal_res["meals"]
-        if m["menuCourseName"][0] in ["A", "B"]
-    ]
-
-    nutrition_url = "https://welplan.pmh.codes/api/meals/nutrition/bulk"
-    nutrition_body = {
-        "mealsData": meals,
-        "sessionId": "default"
-    }
-
-    nutrition_res = requests.post(nutrition_url, json=nutrition_body).json()
-
-    if "results" not in nutrition_res:
-        return JsonResponse({"success": False, "error": "No nutrition results"}, status=400)
-
-    save_count = 0
-
-    # =========================
-    # 3. DB 저장
-    # =========================
-    for result in nutrition_res["results"]:
-
-        if not result.get("success"):
-            continue
-
-        idx = result["mealIndex"]
-        meal_data = meals[idx]  # meals: API에서 받아온 원본 메뉴 데이터
-
-         # nutritionData로 p-score 계산
-        p_score = calculate_p_score(result["nutritionData"])
-
-        meal = Meal.objects.create(
-            date=meal_data["date"],
-            meal_time=meal_data["mealTimeId"],
-            restaurant=meal_data["restaurantData"]["name"],
-            course_type=meal_data["menuCourseName"][0],
-            meal_name=result["mealName"],
-            subMenuTxt=meal_data["subMenuTxt"],
-            p_score=p_score
-        )
-
-        for food_data in result["nutritionData"]:
-            food, created = Food.objects.get_or_create(
-                name=food_data["name"],
-                defaults={
-                    "calorie": food_data["calorie"],
-                    "carbohydrate": food_data["carbohydrate"],
-                    "protein": food_data["protein"],
-                    "fat": food_data["fat"],
-                    "sugar": food_data["sugar"],
-                    "fiber": food_data["fiber"],
+    result = []
+    for meal in meals:
+        foods = meal.mealfood_set.select_related("food")
+        result.append({
+            "meal_name": meal.meal_name,
+            "course_type": meal.course_type,
+            "subMenuTxt": meal.subMenuTxt,
+            "photoUrl": meal.photoUrl,
+            "p_score": meal.p_score,
+            "foods": [
+                {
+                    "name": mf.food.name,
+                    "calorie": mf.food.calorie,
+                    "carbohydrate": mf.food.carbohydrate,
+                    "protein": mf.food.protein,
+                    "fat": mf.food.fat,
+                    "sugar": mf.food.sugar,
+                    "fiber": mf.food.fiber,
+                    "is_main": mf.is_main
                 }
-            )
-
-            MealFood.objects.create(
-                meal=meal,
-                food=food,
-                is_main=food_data["isMain"]
-            )
-
-        save_count += 1
+                for mf in foods
+            ]
+        })
 
     return JsonResponse({
         "success": True,
-        "source": "API",
-        "saved_meals": save_count,
         "date": date_value,
-        "mealTimeId": meal_time_id
+        "mealTimeId": meal_time_id,
+        "data": result
     })
-
 
 def calculate_p_score(nutrition_list):
     kcal = sum(n["calorie"] for n in nutrition_list)
@@ -232,8 +216,8 @@ def recommend_dinner(request):
 - 단백질: {total_nutrition['protein']}
 - 지방: {total_nutrition['fat']}
 
-위 정보를 고려하여 **저녁 식단 1개를 추천**하고,
-왜 그 메뉴를 추천하는지 점심 식단과 사용자 정보를 이유로 상세히 설명해주세요.
+위 정보를 고려하여 그날 그날 다르게 **저녁 식단 1개를 추천**하고,
+왜 그 메뉴를 추천하는지 점심 식단과 사용자 정보를 고려하여 상세히 설명해주세요.
 
 응답 형식:
 {{
