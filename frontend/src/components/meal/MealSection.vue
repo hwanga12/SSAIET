@@ -1,8 +1,9 @@
 <template>
   <section class="meal-page">
+    <!-- ===== 날짜 헤더 (기존 그대로) ===== -->
     <div class="header-container">
       <div class="date-nav-bar">
-        <button class="glass-icon-btn" @click="goPrevDay" aria-label="이전날">
+        <button class="glass-icon-btn" @click="goPrevDay">
           <span class="material-icons">chevron_left</span>
         </button>
 
@@ -12,11 +13,8 @@
           </div>
           <div class="date-content">
             <h2 class="display-date">{{ formattedDate }}</h2>
-            <span class="display-weekday" :class="`type-${currentDate.getDay()}`">
-              {{ weekdayLabel }}
-            </span>
+            <span class="display-weekday">{{ weekdayLabel }}</span>
           </div>
-          
           <input
             ref="dateInputRef"
             type="date"
@@ -26,44 +24,32 @@
           />
         </div>
 
-        <button class="glass-icon-btn" @click="goNextDay" aria-label="다음날">
+        <button class="glass-icon-btn" @click="goNextDay">
           <span class="material-icons">chevron_right</span>
-        </button>
-
-        <button class="today-float-btn" @click="goToday">
-          <span class="material-icons">event</span>
-          <span>Today</span>
         </button>
       </div>
     </div>
 
-    <main class="content-wrapper">
-      <Transition name="fade" mode="out-in">
-        <div v-if="mealStore.isLoading" class="state-card loading">
-          <div class="pulse-loader"></div>
-          <p class="loading-text">맛있는 메뉴를 구성하고 있어요</p>
-        </div>
+    <!-- ===== 점심 카드 영역 (그대로) ===== -->
+    <div class="meal-cards-grid">
+      <MealCard :meal-data="koreanMeal" meal-type="A" />
+      <MealCard :meal-data="singleMeal" meal-type="B" />
+    </div>
 
-        <div v-else-if="mealStore.isClosed" class="state-card empty">
-          <div class="icon-circle shadow-inner">
-            <span class="material-icons">coffee_maker</span>
-          </div>
-          <h3>식당이 쉬어가는 날입니다</h3>
-          <p>다른 날짜의 건강한 식단을 확인해보세요.</p>
-        </div>
+    <!-- ===== 저녁 추천 버튼 (기존 스타일 유지) ===== -->
+    <div class="recommend-action-section">
+      <button class="ai-recommend-btn" @click="onClickDinnerRecommend">
+        <span class="material-icons">restaurant_menu</span>
+        저녁 추천받기
+      </button>
+    </div>
 
-        <div v-else-if="mealStore.error" class="state-card error">
-          <span class="material-icons">error_outline</span>
-          <p>정보를 불러오는 데 실패했습니다.</p>
-          <button @click="location.reload()" class="retry-btn">다시 시도</button>
-        </div>
-
-        <div v-else class="meal-cards-grid">
-          <MealCard :meal-data="koreanMeal" meal-type="A" />
-          <MealCard :meal-data="singleMeal" meal-type="B" />
-        </div>
-      </Transition>
-    </main>
+    <!-- ===== 저녁 추천 카드 ===== -->
+    <DinnerCard
+      v-if="showDinner"
+      :date="apiDate"
+      @close="showDinner = false"
+    />
   </section>
 </template>
 
@@ -71,44 +57,103 @@
 import { ref, computed, watch } from "vue"
 import { useMealStore } from "@/stores/mealStore"
 import MealCard from "./MealCard.vue"
+import DinnerCard from "./DinnerCard.vue"
+import { useAuthStore } from "@/stores/auth"
+import { useRouter } from "vue-router"
+
+const authStore = useAuthStore()
+const router = useRouter()
+
+const onClickDinnerRecommend = () => {
+  if (!authStore.isLoggedIn) {
+    router.push("/login")
+    return
+  }
+  showDinner.value = true
+}
+
 
 const mealStore = useMealStore()
 const dateInputRef = ref(null)
+const showDinner = ref(false)
 
-const formatDateToISO = (date) => date.toISOString().split('T')[0]
+/* =========================
+   🔥 날짜 유틸 (로컬 기준)
+   ========================= */
+const formatDateLocal = (date) => {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, "0")
+  const d = String(date.getDate()).padStart(2, "0")
+  return `${y}-${m}-${d}`
+}
+
+const formatDateForAPI = (date) => {
+  return formatDateLocal(date).replace(/-/g, "")
+}
+
+/* ===== 현재 날짜 ===== */
 const currentDate = ref(new Date())
-const dateInput = ref(formatDateToISO(currentDate.value))
+const dateInput = ref(formatDateLocal(currentDate.value))
 
+/* ===== 화면 표시 ===== */
 const formattedDate = computed(() => {
   const d = currentDate.value
-  return `${d.getFullYear()}년 ${String(d.getMonth() + 1).padStart(2, '0')}월 ${String(d.getDate()).padStart(2, '0')}일`
+  return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`
 })
 
-const weekdays = ["일요일","월요일","화요일","수요일","목요일","금요일","토요일"]
+const weekdays = ["일","월","화","수","목","금","토"]
 const weekdayLabel = computed(() => weekdays[currentDate.value.getDay()])
 
-const apiDate = computed(() => formatDateToISO(currentDate.value).replace(/-/g, ""))
+/* ===== API 날짜 ===== */
+const apiDate = computed(() => formatDateForAPI(currentDate.value))
 
-const goToday = () => { currentDate.value = new Date() }
-const openDatePicker = () => {
-  if (dateInputRef.value) {
-    'showPicker' in dateInputRef.value ? dateInputRef.value.showPicker() : dateInputRef.value.click()
-  }
-}
+/* =========================
+   날짜 이동
+   ========================= */
+const openDatePicker = () => dateInputRef.value?.showPicker()
+
 const onDatePick = (e) => {
-  if (!e.target.value) return
   const [y, m, d] = e.target.value.split("-").map(Number)
   currentDate.value = new Date(y, m - 1, d)
+  dateInput.value = formatDateLocal(currentDate.value)
+  showDinner.value = false
 }
-const goPrevDay = () => { currentDate.value = new Date(currentDate.value.setDate(currentDate.value.getDate() - 1)) }
-const goNextDay = () => { currentDate.value = new Date(currentDate.value.setDate(currentDate.value.getDate() + 1)) }
 
-watch(currentDate, (newDate) => { dateInput.value = formatDateToISO(newDate) })
-const koreanMeal = computed(() => mealStore.menus.find(m => m.course_type === "A") || null)
-const singleMeal = computed(() => mealStore.menus.find(m => m.course_type === "B") || null)
+const goPrevDay = () => {
+  const d = new Date(currentDate.value)
+  d.setDate(d.getDate() - 1)
+  currentDate.value = d
+  dateInput.value = formatDateLocal(d)
+  showDinner.value = false
+}
 
-watch(apiDate, (val) => { mealStore.fetchMeals(val, "2") }, { immediate: true })
+const goNextDay = () => {
+  const d = new Date(currentDate.value)
+  d.setDate(d.getDate() + 1)
+  currentDate.value = d
+  dateInput.value = formatDateLocal(d)
+  showDinner.value = false
+}
+
+/* =========================
+   점심 데이터
+   ========================= */
+const koreanMeal = computed(() =>
+  mealStore.menus.find(m => m.course_type === "A")
+)
+
+const singleMeal = computed(() =>
+  mealStore.menus.find(m => m.course_type === "B")
+)
+
+/* 날짜 바뀌면 점심 다시 조회 */
+watch(apiDate, (val) => {
+  mealStore.fetchMeals(val, "2")
+}, { immediate: true })
 </script>
+
+
+
 
 <style scoped>
 @import url('https://fonts.googleapis.com/icon?family=Material+Icons');
@@ -296,4 +341,37 @@ watch(apiDate, (val) => { mealStore.fetchMeals(val, "2") }, { immediate: true })
   .today-float-btn span:not(.material-icons) { display: none; }
   .today-float-btn { padding: 0 16px; width: 56px; justify-content: center; }
 }
+
+
+/* 🔥 [추가] 저녁 추천 버튼 스타일 */
+.recommend-action-section {
+  display: flex;
+  justify-content: center;
+  margin-top: 50px;
+  padding-bottom: 50px;
+}
+
+.ai-recommend-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 36px;
+  background: #0f172a;
+  color: white;
+  border: none;
+  border-radius: 25px;
+  font-size: 1.1rem;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+  transition: all 0.3s ease;
+}
+
+.ai-recommend-btn:hover {
+  background: #22c55e;
+  transform: translateY(-3px);
+  box-shadow: 0 15px 30px rgba(34, 197, 94, 0.2);
+}
+
 </style>
+

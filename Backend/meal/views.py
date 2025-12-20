@@ -11,6 +11,9 @@ from django.contrib.auth import get_user_model
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
 User = get_user_model()
 
@@ -117,6 +120,7 @@ def save_meal_data(request):
     for meal in meals:
         foods = meal.mealfood_set.select_related("food")
         result.append({
+             "id": meal.id,   
             "meal_name": meal.meal_name,
             "course_type": meal.course_type,
             "subMenuTxt": meal.subMenuTxt,
@@ -151,25 +155,44 @@ def calculate_p_score(nutrition_list):
     carbs = sum(n["carbohydrate"] for n in nutrition_list)
 
     score = 0
-    if 500 <= kcal <= 800:
-        score += 40
+
+    # 1️⃣ 칼로리 점수 (0~35)
+    ideal_kcal = 650
+    kcal_diff = abs(kcal - ideal_kcal)
+    kcal_score = max(0, 35 - (kcal_diff / 10))
+    score += kcal_score
+
+    # 2️⃣ 단백질 비율 점수 (0~40)
+    ratio = protein / (protein + carbs + fat + 1)
+
+    if ratio < 0.15:
+        protein_score = ratio / 0.15 * 20
+    elif ratio <= 0.35:
+        protein_score = 20 + (ratio - 0.15) / 0.2 * 20
     else:
-        score += max(5, 40 - abs(650 - kcal) * 0.1)
+        protein_score = max(20, 40 - (ratio - 0.35) * 100)
 
-    ratio = protein / (carbs + fat + 1)
-    if 0.25 <= ratio <= 0.4:
-        score += 40
+    score += protein_score
 
-    if fat < 20:
-        score += 20
+    # 3️⃣ 지방 점수 (0~25)
+    if fat <= 15:
+        fat_score = 25
+    elif fat <= 30:
+        fat_score = 25 - (fat - 15) * 1.2
+    else:
+        fat_score = max(5, 25 - (fat - 15) * 2)
+
+    score += fat_score
 
     return round(score, 1)
+
 
 
 
 ## 유저 있는 테스트 버전
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@authentication_classes([JWTAuthentication])
 def recommend_dinner(request):
     user = request.user
     usm_id = request.data.get("user_selected_meal_id")
@@ -267,10 +290,11 @@ def recommend_dinner(request):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@authentication_classes([JWTAuthentication])
 def select_meal(request):
+    
     user = request.user
     meal_id = request.data.get("meal_id")
-
     if not meal_id:
         return Response({"error": "meal_id required"}, status=400)
 
