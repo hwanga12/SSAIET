@@ -5,12 +5,20 @@ import SignUpPage from "@/pages/SignUpPage.vue"
 import ProfileSetupPage from "@/pages/ProfileSetupPage.vue"
 import MainPage from "@/pages/MainPage.vue"
 import LoginPage from "@/pages/LoginPage.vue"
+import NutritionCalendar from "@/components/calendar/DinnerCalender.vue"
+// import CalendarPage from "@/pages/CalendarPage.vue"
+
 
 const routes = [
   { path: "/", name: "Main", component: MainPage },
   { path: "/login", name: "Login", component: LoginPage },
   { path: "/signup", name: "Signup", component: SignUpPage },
-
+  {
+    path: "/calendar",
+    name: "NutritionCalendar",
+    component: NutritionCalendar,
+    meta: { requiresAuth: true }
+  },
   {
     path: "/profile-setup",
     name: "ProfileSetup",

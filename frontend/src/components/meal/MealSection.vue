@@ -1,6 +1,6 @@
 <template>
   <section class="meal-page">
-    <!-- ===== 날짜 헤더 (기존 그대로) ===== -->
+    <!-- ===== 날짜 헤더 ===== -->
     <div class="header-container">
       <div class="date-nav-bar">
         <button class="glass-icon-btn" @click="goPrevDay">
@@ -30,23 +30,24 @@
       </div>
     </div>
 
-    <!-- ===== 점심 카드 영역 (그대로) ===== -->
+    <!-- ===== 점심 카드 ===== -->
     <div class="meal-cards-grid">
       <MealCard :meal-data="koreanMeal" meal-type="A" />
       <MealCard :meal-data="singleMeal" meal-type="B" />
     </div>
 
-    <!-- ===== 저녁 추천 버튼 (기존 스타일 유지) ===== -->
+    <!-- ===== 저녁 추천 버튼 ===== -->
     <div class="recommend-action-section">
       <button class="ai-recommend-btn" @click="onClickDinnerRecommend">
-        <span class="material-icons">restaurant_menu</span>
-        저녁 추천받기
-      </button>
+  <span class="material-icons">restaurant_menu</span>
+  {{ hasDinner ? "저녁 메뉴 보기" : "저녁 메뉴 추천 받기" }}
+</button>
     </div>
 
     <!-- ===== 저녁 추천 카드 ===== -->
     <DinnerCard
       v-if="showDinner"
+      :key="apiDate"
       :date="apiDate"
       @close="showDinner = false"
     />
@@ -55,30 +56,25 @@
 
 <script setup>
 import { ref, computed, watch } from "vue"
+import axios from "axios"
 import { useMealStore } from "@/stores/mealStore"
-import MealCard from "./MealCard.vue"
-import DinnerCard from "./DinnerCard.vue"
 import { useAuthStore } from "@/stores/auth"
 import { useRouter } from "vue-router"
 
+import MealCard from "./MealCard.vue"
+import DinnerCard from "./DinnerCard.vue"
+
+const mealStore = useMealStore()
 const authStore = useAuthStore()
 const router = useRouter()
 
-const onClickDinnerRecommend = () => {
-  if (!authStore.isLoggedIn) {
-    router.push("/login")
-    return
-  }
-  showDinner.value = true
-}
-
-
-const mealStore = useMealStore()
-const dateInputRef = ref(null)
 const showDinner = ref(false)
+const dateInputRef = ref(null)
+const hasDinner = ref(false)
+
 
 /* =========================
-   🔥 날짜 유틸 (로컬 기준)
+   날짜 유틸
    ========================= */
 const formatDateLocal = (date) => {
   const y = date.getFullYear()
@@ -87,13 +83,16 @@ const formatDateLocal = (date) => {
   return `${y}-${m}-${d}`
 }
 
-const formatDateForAPI = (date) => {
-  return formatDateLocal(date).replace(/-/g, "")
-}
+const formatDateForAPI = (date) =>
+  formatDateLocal(date).replace(/-/g, "")
 
-/* ===== 현재 날짜 ===== */
+/* ===== 날짜 상태 ===== */
 const currentDate = ref(new Date())
 const dateInput = ref(formatDateLocal(currentDate.value))
+
+const apiDate = computed(() =>
+  formatDateForAPI(currentDate.value)
+)
 
 /* ===== 화면 표시 ===== */
 const formattedDate = computed(() => {
@@ -102,13 +101,37 @@ const formattedDate = computed(() => {
 })
 
 const weekdays = ["일","월","화","수","목","금","토"]
-const weekdayLabel = computed(() => weekdays[currentDate.value.getDay()])
-
-/* ===== API 날짜 ===== */
-const apiDate = computed(() => formatDateForAPI(currentDate.value))
+const weekdayLabel = computed(() =>
+  weekdays[currentDate.value.getDay()]
+)
 
 /* =========================
-   날짜 이동
+   🔥 핵심: 저녁 추천 존재 여부 확인
+   ========================= */
+const checkDinnerExists = async () => {
+  if (!authStore.isLoggedIn) {
+    showDinner.value = false
+    return
+  }
+
+  try {
+    await axios.post(
+      "http://localhost:8000/meal/recommend-dinner/",
+      { date: apiDate.value },
+      { headers: authStore.getAuthHeader() }
+    )
+
+    // ✅ 여기까지 왔다는 건
+    // 이미 추천이 있거나 / 생성됨
+    showDinner.value = true
+
+  } catch {
+    showDinner.value = false
+  }
+}
+
+/* =========================
+   날짜 변경 처리
    ========================= */
 const openDatePicker = () => dateInputRef.value?.showPicker()
 
@@ -116,7 +139,6 @@ const onDatePick = (e) => {
   const [y, m, d] = e.target.value.split("-").map(Number)
   currentDate.value = new Date(y, m - 1, d)
   dateInput.value = formatDateLocal(currentDate.value)
-  showDinner.value = false
 }
 
 const goPrevDay = () => {
@@ -124,7 +146,6 @@ const goPrevDay = () => {
   d.setDate(d.getDate() - 1)
   currentDate.value = d
   dateInput.value = formatDateLocal(d)
-  showDinner.value = false
 }
 
 const goNextDay = () => {
@@ -132,7 +153,6 @@ const goNextDay = () => {
   d.setDate(d.getDate() + 1)
   currentDate.value = d
   dateInput.value = formatDateLocal(d)
-  showDinner.value = false
 }
 
 /* =========================
@@ -146,12 +166,27 @@ const singleMeal = computed(() =>
   mealStore.menus.find(m => m.course_type === "B")
 )
 
-/* 날짜 바뀌면 점심 다시 조회 */
-watch(apiDate, (val) => {
-  mealStore.fetchMeals(val, "2")
-}, { immediate: true })
-</script>
+/* =========================
+   로그인 체크 + 버튼
+   ========================= */
+const onClickDinnerRecommend = () => {
+  if (!authStore.isLoggedIn) {
+    router.push("/login")
+    return
+  }
+  showDinner.value = true
+}
 
+/* =========================
+   🔥 날짜 바뀔 때 동작
+   ========================= */
+watch(apiDate, async () => {
+  showDinner.value = false   // ⭐ 먼저 닫고
+  await mealStore.fetchMeals(apiDate.value, "2")
+  await checkDinnerExists()
+}, { immediate: true })
+
+</script>
 
 
 

@@ -52,6 +52,7 @@ class DinnerRecommendation(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE
     )
+    date = models.IntegerField()
     user_selected_meal = models.ForeignKey(
         UserSelectedMeal,
         on_delete=models.CASCADE,
@@ -62,4 +63,17 @@ class DinnerRecommendation(models.Model):
     ai_reason_text = models.TextField(null=True, blank=True)
     ai_response_json = models.TextField(null=True, blank=True)
     p_score = models.FloatField(default=0)
+    is_eaten = models.BooleanField(
+        null=True,
+        default=None,
+        help_text="None: 미선택 / True: 먹음 / False: 안 먹음"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "date"],
+                name="unique_dinner_per_lunch"
+            )
+        ]
