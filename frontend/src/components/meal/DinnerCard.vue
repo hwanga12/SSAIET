@@ -1,8 +1,8 @@
 <template>
   <section class="dinner-card-wrapper">
-    <!-- 🔹 STEP 1 : 점심 선택 -->
     <div v-if="step === 'select'" class="dinner-card">
       <h3 class="title">점심을 선택해주세요</h3>
+      <p class="sub-title">오늘 드신 점심에 맞춰 AI가 저녁을 추천해드려요.</p>
 
       <div class="lunch-select-list">
         <div
@@ -14,70 +14,49 @@
           <div class="meal-type-badge">
             {{ meal.course_type === 'A' ? '한식' : '일품' }}
           </div>
-
-          <div class="meal-name-text">
-            {{ meal.meal_name }}
-          </div>
-
+          <div class="meal-name-text">{{ meal.meal_name }}</div>
           <span class="material-icons arrow">chevron_right</span>
         </div>
       </div>
+      </div>
 
-      <button class="retry-btn" @click="$emit('close')">닫기</button>
-    </div>
-
-    <!-- 🔹 STEP 2 : 로딩 -->
     <div v-else-if="step === 'loading'" class="dinner-card loading">
       <div class="pulse-loader"></div>
       <p class="loading-text">AI가 저녁 메뉴를 고민 중이에요</p>
     </div>
 
-    <!-- 🔹 STEP 3 : 결과 -->
-<div v-else class="dinner-card result">
-  <h3 class="title">🍽 추천 저녁 메뉴</h3>
+    <div v-else class="dinner-card result">
+      <h3 class="title">🍽 추천 저녁 메뉴</h3>
+      <p class="menu-name">{{ dinnerMenu }}</p>
 
-  <p class="menu-name">{{ dinnerMenu }}</p>
+      <div class="reason-box">
+        <h4>추천 이유</h4>
+        <p>{{ reason }}</p>
+      </div>
 
-  <div class="reason-box">
-    <h4>추천 이유</h4>
-    <p>{{ reason }}</p>
-  </div>
+      <div class="status-message-area">
+        <p v-if="isEaten === true" class="eat-status success">✅ 목표에 한걸음 더 다가갔어요!</p>
+        <p v-else-if="isEaten === false" class="eat-status skip">⏸ 오늘은 저녁을 건너뛰었어요</p>
+        <p v-else class="eat-status guide">이 메뉴를 드실 건가요?</p>
+      </div>
 
-  <!-- 🔥 상태 메시지 -->
-  <p
-    v-if="isEaten === true"
-    class="eat-status success"
-  >
-    ✅ 목표에 한걸음 더 다가갔어요!
-  </p>
-
-  <p
-    v-else-if="isEaten === false"
-    class="eat-status skip"
-  >
-    ⏸ 오늘은 저녁을 건너뛰었어요
-  </p>
-
-  <!-- 🔥 액션 버튼 -->
-  <div class="eat-actions">
-    <button
-      class="eat-btn yes"
-      :class="{ active: isEaten === true }"
-      @click="updateDinner(true)"
-    >
-      먹었어요
-    </button>
-
-    <button
-      class="eat-btn no"
-      :class="{ active: isEaten === false }"
-      @click="updateDinner(false)"
-    >
-      안 먹었어요
-    </button>
-  </div>
-</div>
-
+      <div class="eat-actions">
+        <button
+          class="eat-btn yes"
+          :class="{ active: isEaten === true }"
+          @click="updateDinner(true)"
+        >
+          먹을게요
+        </button>
+        <button
+          class="eat-btn no"
+          :class="{ active: isEaten === false }"
+          @click="updateDinner(false)"
+        >
+          안 먹을게요
+        </button>
+      </div>
+      </div>
   </section>
 </template>
 
@@ -88,11 +67,11 @@ import { useMealStore } from "@/stores/mealStore"
 import { useAuthStore } from "@/stores/auth"
 
 const props = defineProps({
-  date: {
-    type: String,
-    required: true
-  }
+  date: { type: String, required: true }
 })
+
+// emit('close')는 부모의 '추천 창 닫기' 버튼이 처리하므로 호출부가 없어도 무방함
+const emit = defineEmits(['close'])
 
 const mealStore = useMealStore()
 const authStore = useAuthStore()
@@ -103,9 +82,7 @@ const reason = ref("")
 const dinnerId = ref(null)
 const isEaten = ref(null)
 
-
-
-/* 🔥 이미 추천된 저녁 조회 */
+/* 기존 추천 조회 */
 const fetchExistingDinner = async () => {
   try {
     const res = await axios.post(
@@ -122,62 +99,58 @@ const fetchExistingDinner = async () => {
       step.value = "result"
       return
     }
-  } catch {}
-
+  } catch (err) {
+    console.error("추천 데이터 로드 실패")
+  }
   step.value = "select"
 }
 
 /* 점심 선택 */
 const selectLunch = async (mealId) => {
   step.value = "loading"
+  try {
+    const selectRes = await axios.post(
+      "http://localhost:8000/meal/select-meal/",
+      { meal_id: mealId },
+      { headers: authStore.getAuthHeader() }
+    )
 
-  const selectRes = await axios.post(
-    "http://localhost:8000/meal/select-meal/",
-    { meal_id: mealId },
-    { headers: authStore.getAuthHeader() }
-  )
+    const dinnerRes = await axios.post(
+      "http://localhost:8000/meal/recommend-dinner/",
+      { user_selected_meal_id: selectRes.data.user_selected_meal_id },
+      { headers: authStore.getAuthHeader() }
+    )
 
-  const dinnerRes = await axios.post(
-    "http://localhost:8000/meal/recommend-dinner/",
-    { user_selected_meal_id: selectRes.data.user_selected_meal_id },
-    { headers: authStore.getAuthHeader() }
-  )
-
-  dinnerId.value = dinnerRes.data.dinner_id
-  dinnerMenu.value = dinnerRes.data.ai_menu
-  reason.value = dinnerRes.data.reason
-  isEaten.value = dinnerRes.data.is_eaten ?? null
-
-  step.value = "result"
+    dinnerId.value = dinnerRes.data.dinner_id
+    dinnerMenu.value = dinnerRes.data.ai_menu
+    reason.value = dinnerRes.data.reason
+    isEaten.value = dinnerRes.data.is_eaten ?? null
+    step.value = "result"
+  } catch (err) {
+    console.error("추천 실패")
+    step.value = "select"
+  }
 }
 
-/* 먹었음 / 안 먹었음 */
+/* 상태 업데이트 */
 const updateDinner = async (value) => {
-  // 이미 같은 값이면 그냥 리턴 (UX 안정화)
   if (isEaten.value === value) return
-
   isEaten.value = value
-
-  await axios.post(
-    "http://localhost:8000/meal/dinner/status/",
-    {
-      dinner_id: dinnerId.value,
-      is_eaten: value
-    },
-    { headers: authStore.getAuthHeader() }
-  )
+  try {
+    await axios.post(
+      "http://localhost:8000/meal/dinner/status/",
+      { dinner_id: dinnerId.value, is_eaten: value },
+      { headers: authStore.getAuthHeader() }
+    )
+  } catch (err) {
+    console.error("업데이트 에러")
+  }
 }
-
 
 onMounted(fetchExistingDinner)
 </script>
 
-
 <style scoped>
-
-/* 기존 스타일 유지 + 버튼만 정리 */
-
-
 @import url('https://fonts.googleapis.com/icon?family=Material+Icons');
 
 .dinner-card-wrapper {
@@ -186,221 +159,48 @@ onMounted(fetchExistingDinner)
   margin-bottom: 80px;
 }
 
-/* 공통 카드 */
 .dinner-card {
-  max-width: 620px;
+  max-width: 500px;
   width: 100%;
   background: #ffffff;
-  padding: 50px 40px;
-  border-radius: 40px;
-  box-shadow: 0 20px 50px rgba(0,0,0,0.05);
+  padding: 45px 35px;
+  border-radius: 32px;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.06);
   text-align: center;
 }
 
-/* 타이틀 */
-.title {
-  font-size: 1.6rem;
-  font-weight: 900;
-  color: #0f172a;
-  margin-bottom: 20px;
-}
+.title { font-size: 1.5rem; font-weight: 900; color: #0f172a; margin-bottom: 8px; }
+.sub-title { font-size: 0.95rem; color: #64748b; margin-bottom: 24px; font-weight: 500; }
+.menu-name { font-size: 1.7rem; font-weight: 800; color: #22c55e; margin: 20px 0; }
 
-/* 메뉴 이름 */
-.menu-name {
-  font-size: 1.4rem;
-  font-weight: 800;
-  color: #22c55e;
-  margin-bottom: 30px;
-}
-
-/* 이유 */
 .reason-box {
   background: #f8fafc;
   border-radius: 20px;
-  padding: 24px;
+  padding: 20px;
   text-align: left;
-  margin-bottom: 30px;
+  margin-bottom: 24px;
 }
+.reason-box h4 { font-size: 0.9rem; font-weight: 900; color: #0f172a; margin-bottom: 6px; }
+.reason-box p { color: #475569; font-size: 0.95rem; line-height: 1.6; font-weight: 600; }
 
-.reason-box h4 {
-  font-size: 1rem;
-  font-weight: 900;
-  margin-bottom: 8px;
-  color: #0f172a;
-}
-
-.reason-box p {
-  color: #475569;
-  font-weight: 600;
-  line-height: 1.6;
-}
-
-/* 버튼 */
-.retry-btn {
-  padding: 14px 28px;
-  border-radius: 20px;
-  border: none;
-  background: #0f172a;
-  color: #fff;
-  font-weight: 800;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.retry-btn:hover {
-  background: #22c55e;
-}
-
-/* 로딩 */
-.loading-text {
-  font-weight: 700;
-  color: #64748b;
-  margin-top: 14px;
-}
-
-.pulse-loader {
-  width: 50px;
-  height: 50px;
-  background: #22c55e;
-  border-radius: 50%;
-  margin: 0 auto 24px;
-  animation: pulse 1.5s infinite ease-in-out;
-}
-
-@keyframes pulse {
-  0% { transform: scale(0.8); opacity: 0.4; }
-  50% { transform: scale(1.1); opacity: 1; }
-  100% { transform: scale(0.8); opacity: 0.4; }
-}
-
-/* 에러 */
-.error .material-icons {
-  font-size: 48px;
-  color: #ef4444;
-  margin-bottom: 10px;
-}
-
-/* 점심 선택 리스트 */
-.lunch-select-list {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 16px;
-  margin: 30px 0 40px;
-}
-
-/* 선택 카드 */
+.lunch-select-list { display: grid; gap: 12px; margin-bottom: 24px; }
 .lunch-select-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 22px 26px;
-  background: #ffffff;
-  border-radius: 22px;
-  border: 1px solid #f1f5f9;
-  cursor: pointer;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.04);
-  transition: all 0.3s ease;
+  display: flex; align-items: center; padding: 18px 22px;
+  background: #fff; border: 1px solid #f1f5f9; border-radius: 18px;
+  cursor: pointer; transition: 0.2s;
 }
+.lunch-select-card:hover { border-color: #22c55e; transform: translateY(-2px); }
+.meal-name-text { flex: 1; margin-left: 14px; text-align: left; font-weight: 700; color: #1e293b; }
 
-.lunch-select-card:hover {
-  transform: translateY(-4px);
-  border-color: #22c55e;
-  box-shadow: 0 18px 40px rgba(34,197,94,0.18);
-}
+.status-message-area { height: 40px; display: flex; align-items: center; justify-content: center; margin-bottom: 8px; }
+.eat-status { font-weight: 800; font-size: 0.95rem; }
 
-/* 한식 / 일품 뱃지 */
-.meal-type-badge {
-  font-size: 0.75rem;
-  font-weight: 900;
-  padding: 6px 14px;
-  border-radius: 999px;
-  background: #f0fdf4;
-  color: #22c55e;
-}
+.eat-actions { display: flex; gap: 10px; } /* margin-bottom 제거 */
+.eat-btn { flex: 1; padding: 16px; border-radius: 14px; border: none; font-weight: 800; cursor: pointer; opacity: 0.4; transition: 0.2s; }
+.eat-btn.active { opacity: 1; transform: scale(1.02); }
+.eat-btn.yes { background: #22c55e; color: white; }
+.eat-btn.no { background: #f1f5f9; color: #475569; }
 
-/* 메뉴명 */
-.meal-name-text {
-  flex: 1;
-  margin-left: 18px;
-  text-align: left;
-  font-size: 1.05rem;
-  font-weight: 800;
-  color: #0f172a;
-  line-height: 1.4;
-}
-
-/* 화살표 */
-.lunch-select-card .arrow {
-  color: #94a3b8;
-  transition: transform 0.3s, color 0.3s;
-}
-
-.lunch-select-card:hover .arrow {
-  transform: translateX(6px);
-  color: #22c55e;
-}
-.eat-actions {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
-}
-
-.eat-btn {
-  padding: 14px 22px;
-  border-radius: 16px;
-  border: none;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.eat-btn.yes {
-  background: #22c55e;
-  color: white;
-}
-
-.eat-btn.no {
-  background: #e5e7eb;
-  color: #0f172a;
-}
-
-.eat-status {
-  margin: 20px 0 10px;
-  font-weight: 800;
-  font-size: 0.95rem;
-}
-
-.eat-status.success {
-  color: #16a34a;
-}
-
-.eat-status.skip {
-  color: #64748b;
-}
-
-.eat-btn {
-  padding: 14px 22px;
-  border-radius: 16px;
-  border: none;
-  font-weight: 800;
-  cursor: pointer;
-  opacity: 0.6;
-  transition: all 0.2s;
-}
-
-.eat-btn.active {
-  opacity: 1;
-  transform: scale(1.05);
-}
-
-.eat-btn.yes {
-  background: #22c55e;
-  color: white;
-}
-
-.eat-btn.no {
-  background: #e5e7eb;
-  color: #0f172a;
-}
-
-
+.pulse-loader { width: 40px; height: 40px; background: #22c55e; border-radius: 50%; margin: 0 auto 20px; animation: pulse 1.2s infinite; }
+@keyframes pulse { 0%, 100% { transform: scale(0.8); opacity: 0.5; } 50% { transform: scale(1.1); opacity: 1; } }
 </style>

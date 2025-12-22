@@ -25,7 +25,7 @@ def save_meal_data(request):
 
     data = json.loads(request.body or "{}")
 
-    date_value = data.get("date", date.today().strftime("%Y%m%d"))
+    date_value = int(data.get("date", date.today().strftime("%Y%m%d")))
     meal_time_id = data.get("mealTimeId", "2")
 
     # =========================
@@ -382,35 +382,151 @@ def update_dinner_status(request):
         "success": True,
         "is_eaten": dinner.is_eaten
     })
-@api_view(["POST"])
+
+from datetime import date
+from calendar import monthrange
+from .serializers import CalendarDaySerializer,NutritionDayDetailSerializer
+
+
+@api_view(["GET"])
 @permission_classes([IsAuthenticated])
-@authentication_classes([JWTAuthentication])
-def dinner_calendar(request):
+def nutrition_calendar_month(request):
+    """
+    📅 월 캘린더 조회 API
+    - 점심: 사용자가 선택한 메뉴 (요약)
+    - 저녁: AI 추천 결과 + 섭취 여부
+    """
     user = request.user
-    year = int(request.data.get("year"))
-    month = int(request.data.get("month"))
 
-    start_date = int(f"{year}{str(month).zfill(2)}01")
-    end_date = int(f"{year}{str(month).zfill(2)}31")
+    year = int(request.GET.get("year"))
+    month = int(request.GET.get("month"))
 
-    dinners = DinnerRecommendation.objects.filter(
-        user=user,
-        date__gte=start_date,
-        date__lte=end_date
+    # 해당 월 시작 / 끝
+    start_date = year * 10000 + month * 100 + 1
+    end_day = monthrange(year, month)[1]
+    end_date = year * 10000 + month * 100 + end_day
+
+    # ===============================
+    # 1️⃣ 점심 (UserSelectedMeal)
+    # ===============================
+    lunch_qs = (
+        UserSelectedMeal.objects
+        .select_related("meal")
+        .filter(
+            user=user,
+            meal__date__range=[start_date, end_date]
+        )
     )
 
-    result = {}
-    for d in dinners:
-        if d.is_eaten is True:
-            status = "eaten"
-        elif d.is_eaten is False:
-            status = "skipped"
-        else:
-            status = "pending"
+    # date(int) 기준으로 매핑
+    lunch_map = {
+        usm.meal.date: usm
+        for usm in lunch_qs
+    }
 
-        result[str(d.date)] = status
+    # ===============================
+    # 2️⃣ 저녁 (DinnerRecommendation)
+    # ===============================
+    dinner_qs = DinnerRecommendation.objects.filter(
+        user=user,
+        date__range=[start_date, end_date]
+    )
 
-    return Response({
-        "success": True,
-        "calendar": result
-    })
+    dinner_map = {
+        dr.date: dr
+        for dr in dinner_qs
+    }
+
+    # ===============================
+    # 3️⃣ 날짜별 데이터 조합
+    # ===============================
+    result = []
+
+    for day in range(1, end_day + 1):
+        current_date = year * 10000 + month * 100 + day
+
+        lunch = lunch_map.get(current_date)
+        dinner = dinner_map.get(current_date)
+
+        # 아무 기록도 없는 날은 제외 (원하면 제거 가능)
+        if not lunch and not dinner:
+            continue
+
+        result.append({
+            "date": current_date,
+            "lunch": {
+                "meal_name": lunch.meal.meal_name,
+                "course_type": lunch.meal.course_type,
+            } if lunch else None,
+            "dinner": {
+                "ai_menu_name": dinner.ai_menu_name,
+                "is_eaten": dinner.is_eaten,
+            } if dinner else None,
+        })
+
+    # ===============================
+    # 4️⃣ Serializer로 포장
+    # ===============================
+    serializer = CalendarDaySerializer(result, many=True)
+    return Response(serializer.data)
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def nutrition_day_detail(request, date):
+    """
+    📄 날짜 상세 조회 API
+    - 해당 날짜의 점심 + 저녁 전체 정보
+    - 캘린더에서 날짜 클릭 시 사용
+    """
+    user = request.user
+
+    # ===============================
+    # 1️⃣ 점심 (UserSelectedMeal → Meal)
+    # ===============================
+    lunch_obj = (
+        UserSelectedMeal.objects
+        .select_related("meal")
+        .filter(user=user, meal__date=date)
+        .first()
+    )
+
+    lunch_data = None
+    if lunch_obj:
+        meal = lunch_obj.meal
+        lunch_data = {
+            "meal_name": meal.meal_name,
+            "course_type": meal.course_type,
+            "restaurant": meal.restaurant,
+            "subMenuTxt": meal.subMenuTxt,
+            "p_score": meal.p_score,
+            "photoUrl": meal.photoUrl,
+        }
+
+    # ===============================
+    # 2️⃣ 저녁 (DinnerRecommendation)
+    # ===============================
+    dinner_obj = DinnerRecommendation.objects.filter(
+        user=user,
+        date=date
+    ).first()
+
+    dinner_data = None
+    if dinner_obj:
+        dinner_data = {
+            "ai_menu_name": dinner_obj.ai_menu_name,
+            "ai_reason_text": dinner_obj.ai_reason_text,
+            "p_score": dinner_obj.p_score,
+            "is_eaten": dinner_obj.is_eaten,
+        }
+
+    # ===============================
+    # 3️⃣ 응답 조합
+    # ===============================
+    result = {
+        "date": date,
+        "lunch": lunch_data,
+        "dinner": dinner_data,
+    }
+
+    serializer = NutritionDayDetailSerializer(result)
+    return Response(serializer.data)
