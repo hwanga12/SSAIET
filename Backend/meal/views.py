@@ -194,9 +194,7 @@ def calculate_p_score(nutrition_list):
 def recommend_dinner(request):
     user = request.user
 
-    # =========================
-    # CASE 1️⃣ 날짜로 기존 저녁 조회 (달력 이동 / 최초 진입)
-    # =========================
+    # 날짜 값 받기
     date_value = request.data.get("date")
     if date_value:
         existing = DinnerRecommendation.objects.filter(
@@ -210,7 +208,8 @@ def recommend_dinner(request):
                 "cached": True,
                 "dinner_id": existing.id,
                 "ai_menu": existing.ai_menu_name,
-                "reason": existing.ai_reason_text,
+                "reason": existing.ai_reason_text,  # 기존 reason에 카드뉴스 포함
+                "card_news": existing.ai_reason_text,  # reason에 카드뉴스 포함
                 "is_eaten": existing.is_eaten,
             })
 
@@ -219,9 +218,7 @@ def recommend_dinner(request):
             "cached": False,
         })
 
-    # =========================
-    # CASE 2️⃣ 점심 선택 후 저녁 추천
-    # =========================
+    # 점심 선택 후 저녁 추천
     usm_id = request.data.get("user_selected_meal_id")
     if not usm_id:
         return Response(
@@ -243,7 +240,7 @@ def recommend_dinner(request):
     lunch = user_selected_meal.meal
     date_value = lunch.date
 
-    # 🔥 이미 그 날짜에 저녁 추천이 있으면 그대로 반환
+    # 기존 추천이 있으면 반환
     existing = DinnerRecommendation.objects.filter(
         user=user,
         date=date_value
@@ -255,13 +252,12 @@ def recommend_dinner(request):
             "cached": True,
             "dinner_id": existing.id,
             "ai_menu": existing.ai_menu_name,
-            "reason": existing.ai_reason_text,
+            "reason": existing.ai_reason_text,  # reason에 카드뉴스 포함
+            "card_news": existing.ai_reason_text,  # reason에 카드뉴스 포함
             "is_eaten": existing.is_eaten,
         })
 
-    # =========================
     # GPT 추천 생성
-    # =========================
     foods = lunch.mealfood_set.select_related("food")
     total_nutrition = {
         "calorie": sum(f.food.calorie for f in foods),
@@ -271,41 +267,43 @@ def recommend_dinner(request):
     }
 
     prompt = f"""
-당신은 개인 맞춤 식단 전문가입니다.
+    당신은 개인 맞춤 식단 전문가입니다.
 
-[사용자 정보]
-- 키: {user.height}
-- 몸무게: {user.current_weight}
-- 알러지: {user.allergies}
-- 목표 체중: {user.target_weight}
-- 근육량: {user.muscle_mass}
-- 체지방률: {user.body_fat}
-- 나이: {user.age}
-- 성별: {user.gender}
+    [사용자 정보]
+    - 키: {user.height}
+    - 몸무게: {user.current_weight}
+    - 알러지: {user.allergies}
+    - 목표 체중: {user.target_weight}
+    - 근육량: {user.muscle_mass}
+    - 체지방률: {user.body_fat}
+    - 나이: {user.age}
+    - 성별: {user.gender}    
 
-[점심 식단]
-- 메뉴명: {lunch.meal_name}
-- 구성: {lunch.subMenuTxt}
-- P-Score: {lunch.p_score}
+    [점심 식단]
+    - 메뉴명: {lunch.meal_name}
+    - 구성: {lunch.subMenuTxt}
+    - P-Score: {lunch.p_score}
 
-[점심 영양]
-- 칼로리: {total_nutrition['calorie']}
-- 탄수화물: {total_nutrition['carbs']}
-- 단백질: {total_nutrition['protein']}
-- 지방: {total_nutrition['fat']}
+    [점심 영양]
+    - 칼로리: {total_nutrition['calorie']}
+    - 탄수화물: {total_nutrition['carbs']}
+    - 단백질: {total_nutrition['protein']}
+    - 지방: {total_nutrition['fat']}
 
-위 정보를 기반으로 **오늘 하루에 맞는 저녁 식단 1개만 추천**하세요.
+    위 정보를 기반으로 **오늘 하루에 맞는 저녁 식단 1개만 추천**하세요.
+    카드 뉴스 형태로 줄바꿈 잘 해서 문단 나눠서 추천해줘.
 
-응답 형식(JSON):
-{{
-  "menu": "추천 저녁 메뉴",
-  "reason": "추천 이유"
-}}
-"""
+    응답 형식(JSON):
+    {{
+    "menu": "✨ 부드러운 닭안심 야채죽 세트 🍲🥕",
+    "reason": "점심이 기름지고 양이 많았으므로, 저녁은 소화가 부담이 적고 영양이 균형 잡힌 죽 메뉴를 추천드립니다.",
+    "card_news": "--- \n## 🍱 오늘의 추천 메뉴\n### **'부드러운 닭안심 야채죽 세트 🍲🥕'**\n> **'점심의 무거움을 가볍게 덮어주는 부드러운 담요 같은 저녁'**\n\n--- \n## 🥗 영양 밸런스\n- 🍗 **단백질**: 닭안심을 잘게 찢어 넣어 부드럽고 소화가 쉬우며 성장에 필요한 아미노산을 보충해요.\n- 🍚 **탄수화물**: 쌀죽으로 위에 부담이 적고 에너지를 안정적으로 제공해요. 잘 익힌 단호박/당근을 더하면 비타민도 보완돼요.\n- 💧 **나트륨**: 따로 간하지 않고 채소 육수로 풍미를 내 저염으로 관리해요. 장아찌·간장·치즈 등 염분 높은 부재료는 피하세요.\n\n--- \n## 💡 전문가 추천 이유\n> **'푸짐했던 점심 뒤에는 부드럽고 담백한 회복 저녁'**\n- 점심이 기름지고 양이 많았던 만큼 저녁은 죽·찐채소 중심으로 소화 부담을 줄여요.\n- 알레르기 위험을 낮추기 위해 익힌 단일 재료 위주로 구성하고, 새로운 식품은 한 가지씩 소량 도입 후 반응을 관찰해요.\n- 물과 수분 많은 채소로 충분히 수분을 보충하고, 식이섬유로 장 건강을 돕습니다.\n- 손으로 잡기 쉬운 크기로 썰어 스스로 먹을 수 있게 도와 아이의 식행동 자율성을 지켜요.\n\n--- \n## ⚠️ 안심 가이드\n- 알레르기 병력이 불명확하니 새로운 재료는 3일 규칙(하루 1가지, 소량, 반응 관찰)을 지키세요.\n- 1세는 질감 조절이 중요해요: 잘게 다지거나 으깨서 질식 위험이 있는 통곡/견과/포도 통알 등은 피하세요.\n- 간은 무염 또는 최소로; 국·죽은 물로 희석해 나트륨을 낮추세요.\n- 입력된 키·체중 값이 비현실적일 수 있어요. 실제 발달 상태는 보호자와 의료진이 성장곡선으로 확인하세요.\n- 특정 질환/영양제 복용/중증 알레르기가 있다면 소아과·영양사와 상의하세요.\n- 양은 배고픔 신호에 맞춰 소량부터 제공하고, 먹기를 강요하지 마세요."
+    }}
+    """
 
     url = "https://gms.ssafy.io/gmsapi/api.openai.com/v1/chat/completions"
     body = {
-        "model": "gpt-5-nano",
+        "model": "gpt-5",
         "messages": [
             {"role": "developer", "content": "Answer in Korean"},
             {"role": "user", "content": prompt}
@@ -320,12 +318,13 @@ def recommend_dinner(request):
     gpt_res = requests.post(url, json=body, headers=headers).json()
     ai_json = json.loads(gpt_res["choices"][0]["message"]["content"])
 
+    # ai_card_news를 ai_reason_text에 결합하여 저장
     dinner = DinnerRecommendation.objects.create(
         user=user,
         user_selected_meal=user_selected_meal,
         date=date_value,
         ai_menu_name=ai_json["menu"],
-        ai_reason_text=ai_json["reason"],
+        ai_reason_text=ai_json["reason"] + "\n\n" + ai_json["card_news"],  # 카드 뉴스와 이유 결합
         ai_response_json=json.dumps(ai_json),
         p_score=lunch.p_score,
     )
@@ -335,7 +334,7 @@ def recommend_dinner(request):
         "cached": False,
         "dinner_id": dinner.id,
         "ai_menu": dinner.ai_menu_name,
-        "reason": dinner.ai_reason_text,
+        "reason": dinner.ai_reason_text,  # reason에 카드 뉴스 포함
         "is_eaten": dinner.is_eaten,
     })
 

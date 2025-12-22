@@ -1,5 +1,6 @@
 <template>
   <section class="dinner-card-wrapper">
+    <!-- 🔹 STEP 1: 점심 선택 -->
     <div v-if="step === 'select'" class="dinner-card">
       <h3 class="title">점심을 선택해주세요</h3>
       <p class="sub-title">오늘 드신 점심에 맞춰 AI가 저녁을 추천해드려요.</p>
@@ -18,27 +19,34 @@
           <span class="material-icons arrow">chevron_right</span>
         </div>
       </div>
-      </div>
 
+      <button class="retry-btn" @click="$emit('close')">닫기</button>
+    </div>
+
+    <!-- 🔹 STEP 2: 로딩 -->
     <div v-else-if="step === 'loading'" class="dinner-card loading">
       <div class="pulse-loader"></div>
       <p class="loading-text">AI가 저녁 메뉴를 고민 중이에요</p>
     </div>
 
+    <!-- 🔹 STEP 3: 결과 -->
     <div v-else class="dinner-card result">
       <h3 class="title">🍽 추천 저녁 메뉴</h3>
+
       <p class="menu-name">{{ dinnerMenu }}</p>
 
       <div class="reason-box">
         <h4>추천 이유</h4>
-        <p>{{ reason }}</p>
+        <div v-html="renderedReason"></div>
       </div>
 
-      <div class="status-message-area">
-        <p v-if="isEaten === true" class="eat-status success">✅ 목표에 한걸음 더 다가갔어요!</p>
-        <p v-else-if="isEaten === false" class="eat-status skip">⏸ 오늘은 저녁을 건너뛰었어요</p>
-        <p v-else class="eat-status guide">이 메뉴를 드실 건가요?</p>
-      </div>
+      <p v-if="isEaten === true" class="eat-status success">
+        ✅ 목표에 한걸음 더 다가갔어요!
+      </p>
+
+      <p v-else-if="isEaten === false" class="eat-status skip">
+        ⏸ 오늘은 저녁을 건너뛰었어요
+      </p>
 
       <div class="eat-actions">
         <button
@@ -46,111 +54,122 @@
           :class="{ active: isEaten === true }"
           @click="updateDinner(true)"
         >
-          먹을게요
+          먹을래요!
         </button>
+
         <button
           class="eat-btn no"
           :class="{ active: isEaten === false }"
           @click="updateDinner(false)"
         >
-          안 먹을게요
+          오늘은 스킵할래요!
         </button>
       </div>
-      </div>
+    </div>
   </section>
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue"
-import axios from "axios"
-import { useMealStore } from "@/stores/mealStore"
-import { useAuthStore } from "@/stores/auth"
+import { ref, onMounted, computed } from "vue";
+import axios from "axios";
+import { useMealStore } from "@/stores/mealStore";
+import { useAuthStore } from "@/stores/auth";
+import MarkdownIt from "markdown-it";
+
+defineEmits(["close"]);
 
 const props = defineProps({
-  date: { type: String, required: true }
-})
+  date: {
+    type: String,
+    required: true,
+  },
+});
 
-// emit('close')는 부모의 '추천 창 닫기' 버튼이 처리하므로 호출부가 없어도 무방함
-const emit = defineEmits(['close'])
+const mealStore = useMealStore();
+const authStore = useAuthStore();
 
-const mealStore = useMealStore()
-const authStore = useAuthStore()
+const step = ref("loading");
+const dinnerMenu = ref("");
+const reason = ref("");
+const dinnerId = ref(null);
+const isEaten = ref(null);
 
-const step = ref("loading")
-const dinnerMenu = ref("")
-const reason = ref("")
-const dinnerId = ref(null)
-const isEaten = ref(null)
+const renderedReason = computed(() => {
+  const md = new MarkdownIt();
+  return md.render(reason.value || "");
+});
 
-/* 기존 추천 조회 */
+/* 🔥 이미 추천된 저녁 조회 */
 const fetchExistingDinner = async () => {
   try {
     const res = await axios.post(
       "http://localhost:8000/meal/recommend-dinner/",
       { date: props.date },
       { headers: authStore.getAuthHeader() }
-    )
+    );
 
     if (res.data?.cached) {
-      dinnerId.value = res.data.dinner_id
-      dinnerMenu.value = res.data.ai_menu
-      reason.value = res.data.reason
-      isEaten.value = res.data.is_eaten
-      step.value = "result"
-      return
+      dinnerId.value = res.data.dinner_id;
+      dinnerMenu.value = res.data.ai_menu;
+      reason.value = res.data.reason;
+      isEaten.value = res.data.is_eaten;
+      step.value = "result";
+      return;
     }
-  } catch (err) {
-    console.error("추천 데이터 로드 실패")
+  } catch (e) {
+    console.error(e);
   }
-  step.value = "select"
-}
+
+  step.value = "select";
+};
 
 /* 점심 선택 */
 const selectLunch = async (mealId) => {
-  step.value = "loading"
-  try {
-    const selectRes = await axios.post(
-      "http://localhost:8000/meal/select-meal/",
-      { meal_id: mealId },
-      { headers: authStore.getAuthHeader() }
-    )
+  step.value = "loading";
 
-    const dinnerRes = await axios.post(
-      "http://localhost:8000/meal/recommend-dinner/",
-      { user_selected_meal_id: selectRes.data.user_selected_meal_id },
-      { headers: authStore.getAuthHeader() }
-    )
+  const selectRes = await axios.post(
+    "http://localhost:8000/meal/select-meal/",
+    { meal_id: mealId },
+    { headers: authStore.getAuthHeader() }
+  );
 
-    dinnerId.value = dinnerRes.data.dinner_id
-    dinnerMenu.value = dinnerRes.data.ai_menu
-    reason.value = dinnerRes.data.reason
-    isEaten.value = dinnerRes.data.is_eaten ?? null
-    step.value = "result"
-  } catch (err) {
-    console.error("추천 실패")
-    step.value = "select"
-  }
-}
+  const dinnerRes = await axios.post(
+    "http://localhost:8000/meal/recommend-dinner/",
+    { user_selected_meal_id: selectRes.data.user_selected_meal_id },
+    { headers: authStore.getAuthHeader() }
+  );
+
+  dinnerId.value = dinnerRes.data.dinner_id;
+  dinnerMenu.value = dinnerRes.data.ai_menu;
+  reason.value = dinnerRes.data.reason;
+  isEaten.value = dinnerRes.data.is_eaten ?? null;
+
+  step.value = "result";
+};
 
 /* 상태 업데이트 */
 const updateDinner = async (value) => {
-  if (isEaten.value === value) return
-  isEaten.value = value
-  try {
-    await axios.post(
-      "http://localhost:8000/meal/dinner/status/",
-      { dinner_id: dinnerId.value, is_eaten: value },
-      { headers: authStore.getAuthHeader() }
-    )
-  } catch (err) {
-    console.error("업데이트 에러")
-  }
-}
+  if (isEaten.value === value) return;
 
-onMounted(fetchExistingDinner)
+  isEaten.value = value;
+
+  await axios.post(
+    "http://localhost:8000/meal/dinner/status/",
+    {
+      dinner_id: dinnerId.value,
+      is_eaten: value,
+    },
+    { headers: authStore.getAuthHeader() }
+  );
+};
+
+onMounted(fetchExistingDinner);
 </script>
 
+
 <style scoped>
+/* 기존 스타일 유지 + 버튼만 정리 */
+
 @import url('https://fonts.googleapis.com/icon?family=Material+Icons');
 
 .dinner-card-wrapper {
