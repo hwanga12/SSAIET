@@ -9,4 +9,5 @@ urlpatterns = [
     path('me/weight/', views.update_weight_settings),
     path('me/account/', views.update_account),
     path('me/delete/', views.delete_account),
+    path("mypage/", views.mypage),
 ]

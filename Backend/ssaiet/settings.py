@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'meal',
     'accounts',
     "corsheaders",
+    "community",
     'rest_framework',
     'rest_framework_simplejwt',
     'django.contrib.admin',

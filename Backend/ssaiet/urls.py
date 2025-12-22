@@ -11,12 +11,13 @@ urlpatterns = [
     # API 엔드포인트
     path('api/accounts/', include('accounts.urls')),
 
-    ## 🌟 JWT 인증 경로 추가 🌟
-    # 1. 토큰 발급 (로그인): username과 password를 보내면 Access/Refresh 토큰을 받습니다.
+    # JWT 인증
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    
-    # 2. 토큰 갱신: 만료된 Access 토큰을 Refresh 토큰으로 갱신하여 새 Access 토큰을 받습니다.
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 
+    # 식단
     path('meal/', include('meal.urls')),
+
+    # ✅ 커뮤니티 (이 줄 추가!!)
+    path('api/community/', include('community.urls')),
 ]

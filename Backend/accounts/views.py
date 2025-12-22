@@ -155,3 +155,44 @@ def logout(request):
     여기서는 단순히 성공 응답만 반환.
     """
     return Response({"message": "logout success"}, status=200)
+
+from community.models import CommunityPost, PostComment, PostLike
+from community.serializers import CommunityPostSerializer, PostCommentSerializer
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def mypage(request):
+    user = request.user
+
+    # ✅ 내가 쓴 게시글
+    my_posts = CommunityPost.objects.filter(author=user)
+
+    # ✅ 내가 쓴 댓글
+    my_comments = PostComment.objects.filter(author=user)
+
+    # ✅ 내가 좋아요한 게시글
+    liked_post_ids = PostLike.objects.filter(user=user).values_list("post_id", flat=True)
+    liked_posts = CommunityPost.objects.filter(id__in=liked_post_ids)
+
+    return Response({
+        "counts": {
+            "post_count": my_posts.count(),
+            "comment_count": my_comments.count(),
+            "like_count": liked_post_ids.count(),
+        },
+        "posts": CommunityPostSerializer(
+            my_posts,
+            many=True,
+            context={"request": request}
+        ).data,
+        "comments": PostCommentSerializer(
+            my_comments,
+            many=True,
+            context={"request": request}
+        ).data,
+        "liked_posts": CommunityPostSerializer(
+            liked_posts,
+            many=True,
+            context={"request": request}
+        ).data,
+    })
