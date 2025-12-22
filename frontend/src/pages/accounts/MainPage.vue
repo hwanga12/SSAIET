@@ -14,14 +14,14 @@
       />
 
       <Transition name="section-fade">
-        <div v-if="authStore.isLoggedIn" id="today-meal-section" class="meal-wrapper">
+        <div id="today-meal-section" class="meal-wrapper">
           <div class="section-divider">
             <span class="divider-text">Today's Nutrition</span>
           </div>
           <MealSection />
         </div>
       </Transition>
-
+<!-- 
       <Transition name="section-fade">
         <section v-if="!authStore.isLoggedIn" class="preview-section">
           <div class="preview-banner">
@@ -31,7 +31,7 @@
             <button class="banner-btn" @click="router.push('/signup')">3초만에 시작하기</button>
           </div>
         </section>
-      </Transition>
+      </Transition> -->
     </main>
 
     <footer class="main-footer">

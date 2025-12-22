@@ -7,6 +7,7 @@ import MainPage from "@/pages/accounts/MainPage.vue"
 import LoginPage from "@/pages/accounts/LoginPage.vue"
 import NotFoundView from "@/pages/accounts/NotFoundView.vue"
 import MapView from '@/pages/map/MapView.vue'
+import NutritionCalendar from "@/components/calendar/DinnerCalender.vue"
 
 // ✅ 커뮤니티 페이지 (상세 페이지와 리스트 페이지 분류 명확화)
 const CommunityListPage = () => import("@/pages/community/CommunityPage.vue")
@@ -17,7 +18,12 @@ const routes = [
   { path: "/", name: "Main", component: MainPage },
   { path: "/login", name: "Login", component: LoginPage },
   { path: "/signup", name: "Signup", component: SignUpPage },
-
+  {
+    path: "/calendar",
+    name: "NutritionCalendar",
+    component: NutritionCalendar,
+    meta: { requiresAuth: true }
+  },
   {
     path: "/profile-setup",
     name: "ProfileSetup",
