@@ -36,7 +36,7 @@
 
     <footer class="main-footer">
       <div class="footer-content">
-        <img src="@/assets/SSAIET_LOGO.png" alt="SSAIET" class="footer-logo" />
+        <img src="@/assets/1.png" alt="SSAIET" class="footer-logo" />
         <p>&copy; 2025 SSAIET. All rights reserved for SSAFY Students.</p>
       </div>
     </footer>

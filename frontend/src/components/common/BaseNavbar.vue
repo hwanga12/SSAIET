@@ -3,7 +3,7 @@
     <!-- ================= LEFT ================= -->
     <div class="navbar-left">
       <div class="logo-wrapper" @click="goHome">
-        <img src="@/assets/SSAIET_LOGO.png" alt="SSAIET Logo" class="logo-img" />
+        <img src="@/assets/1.png" alt="SSAIET Logo" class="logo-img" />
       </div>
 
       <nav class="main-nav" v-if="authStore.isLoggedIn">
@@ -19,9 +19,10 @@
           <span class="material-icons">forum</span>
           <span class="nav-text">커뮤니티</span>
         </button>
-        <button class="nav-link status-link" @click="router.push('/status')">
-          <span class="material-icons">groups</span>
-          <span class="nav-text">식당 순서</span>
+        
+        <button class="nav-link status-link" @click="router.push('/map')">
+          <span class="material-icons">map</span>
+          <span class="nav-text">주변 식당</span>
         </button>
       </nav>
     </div>
@@ -42,7 +43,6 @@
             :class="{ active: menuOpen }"
             @click.stop="toggleMenu"
           >
-            <span class="user-avatar">🥗</span>
             <span class="user-name">{{ authStore.user?.name }}님</span>
             <span class="material-icons chevron-icon">expand_more</span>
           </button>
@@ -62,7 +62,7 @@
               <!-- 메뉴 -->
               <button class="menu-item" @click="goProfile">
                 <span class="material-icons">person_outline</span>
-                내 건강 정보
+                내 프로필
               </button>
               <button class="menu-item" @click="goSettings">
                 <span class="material-icons">settings</span>
@@ -153,7 +153,7 @@ const logout = () => {
 }
 
 .logo-img {
-  height: 40px;
+  height: 80px;
   cursor: pointer;
 }
 
@@ -394,4 +394,36 @@ const logout = () => {
   background: #e5e7eb;
   margin: 8px 0;
 }
+/* ================= PC 고정 레이아웃 ================= */
+
+.navbar {
+  position: fixed;
+  top: 0;
+  width: 100%;
+  min-width: 1280px;   /* 🔥 핵심 */
+  height: 76px;
+  padding: 0 40px;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 1000;
+  box-sizing: border-box;
+}
+
+/* 줄바꿈 완전 차단 */
+.navbar * {
+  white-space: nowrap;
+}
+
+/* 줄어들지 않게 고정 */
+.navbar-left,
+.navbar-right,
+.main-nav,
+.logo-img {
+  flex-shrink: 0;
+}
+
 </style>

@@ -1,86 +1,60 @@
 <template>
-  <section class="profile-top">
-    <!-- 왼쪽: 사진 + 이름 (공통) -->
-    <div class="left">
-      <div class="avatar">
+  <section class="profile-card-content">
+    <div class="user-info-section">
+      <div class="avatar-wrapper">
         <img :src="genderImage" alt="profile" />
       </div>
-      <h2 class="name">{{ user.name }}</h2>
+      <h2 class="user-name">{{ user.name }}</h2>
     </div>
 
-    <!-- 오른쪽 -->
-    <div class="right">
-      <!-- 🔹 조회 모드 -->
+    <div class="body-info-section">
       <template v-if="mode === 'view'">
-        <h3 class="section-title">신체 정보</h3>
-
-        <div class="info-grid">
-          <div class="item">
-            <span class="label">키</span>
-            <strong class="value">
-              {{ user.height }}
-              <span class="unit">cm</span>
-            </strong>
+        <div class="info-list">
+          <div class="info-row">
+            <span class="label">키 / 나이 / 성별</span>
+            <span class="value">
+              <strong>{{ user.height }}</strong>cm / 
+              <strong>{{ user.age }}</strong>세 / 
+              <strong>{{ user.gender === "M" ? "남" : "여" }}</strong>
+            </span>
           </div>
 
-          <div class="item">
-            <span class="label">나이</span>
-            <strong class="value">
-              {{ user.age }}
-              <span class="unit">세</span>
-            </strong>
-          </div>
-
-          <div class="item">
-            <span class="label">성별</span>
-            <strong class="value">
-              {{ user.gender === "M" ? "남자" : "여자" }}
-            </strong>
-          </div>
-
-          <div class="item">
+          <div class="info-row">
             <span class="label">현재 체중</span>
-            <strong class="value">
-              {{ user.current_weight }}
-              <span class="unit">kg</span>
-            </strong>
+            <span class="value"><strong>{{ user.current_weight }}</strong> kg</span>
           </div>
 
-          <div class="item">
+          <div class="info-row">
             <span class="label">목표 체중</span>
-            <strong class="value">
-              {{ user.target_weight }}
-              <span class="unit">kg</span>
-            </strong>
+            <span class="value accent"><strong>{{ user.target_weight }}</strong> kg</span>
           </div>
 
-          <div class="item">
-            <span class="label">체지방률</span>
-            <strong class="value">
-              {{ user.body_fat }}
-              <span class="unit">%</span>
-            </strong>
-          </div>
-
-          <div class="item">
-            <span class="label">골격근량</span>
-            <strong class="value">
-              {{ user.muscle_mass }}
-              <span class="unit">kg</span>
-            </strong>
+          <div class="info-row">
+            <span class="label">골격근량 / 체지방</span>
+            <span class="value">
+              <strong>{{ user.muscle_mass }}</strong>kg / 
+              <strong>{{ user.body_fat }}</strong>%
+            </span>
           </div>
         </div>
 
-        <!-- 🚫 알러지 -->
-        <div class="allergy-box">
-          <span class="allergy-label">알러지 정보</span>
-          <p class="allergy-text">
-            {{ user.allergies || "등록된 알러지 정보가 없습니다." }}
-          </p>
+        <div class="allergy-footer">
+          <span class="label">알러지 정보</span>
+          <p class="text">{{ user.allergies || "등록된 정보 없음" }}</p>
+        </div>
+
+        <div class="profile-action-group">
+          <button class="action-btn secondary-btn" @click="goAccountEdit">
+            <span class="material-icons">manage_accounts</span>
+            <span>계정 설정</span>
+          </button>
+          <button class="action-btn primary-btn" @click="goEdit">
+            <span class="material-icons">settings</span>
+            <span>내 정보 수정하기</span>
+          </button>
         </div>
       </template>
 
-      <!-- 🔹 수정 모드 -->
       <template v-else>
         <slot />
       </template>
@@ -90,19 +64,19 @@
 
 <script setup>
 import { computed } from "vue"
+import { useRouter } from "vue-router"
 
 const props = defineProps({
-  user: {
-    type: Object,
-    required: true
-  },
-  mode: {
-    type: String,
-    default: "view" // view | edit
-  }
+  user: { type: Object, required: true },
+  mode: { type: String, default: "view" }
 })
+const router = useRouter()
+const goEdit = () => router.push("/profile/edit")
+const goAccountEdit = () => router.push("/account/edit")
 
-/* 👤 성별 이미지 */
+// 부모 컴포넌트로 버튼 클릭 이벤트를 보냄
+defineEmits(['account-edit', 'profile-edit'])
+
 const genderImage = computed(() => {
   return props.user.gender === "F"
     ? new URL("@/assets/ssafy_woman.png", import.meta.url).href
@@ -111,103 +85,117 @@ const genderImage = computed(() => {
 </script>
 
 <style scoped>
-/* 카드 전체 */
-.profile-top {
+/* 기존 스타일 유지 */
+.profile-card-content {
+  width: 100%;
   display: flex;
-  gap: 48px;
-  background: #fff;
-  padding: 44px;
-  border-radius: 28px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+  flex-direction: column;
+  background: transparent;
+  padding: 30px;
+  box-sizing: border-box;
 }
 
-/* 왼쪽 영역 */
-.left {
-  width: 260px;
+.user-info-section {
   display: flex;
   flex-direction: column;
   align-items: center;
+  padding-bottom: 25px;
+  border-bottom: 1px dashed #f1f5f9;
+  margin-bottom: 25px;
 }
 
-.avatar {
-  width: 200px;
-  height: 200px;
-  border-radius: 32px;
-  background: linear-gradient(145deg, #f2f4f6, #ffffff);
-  box-shadow: 0 12px 24px rgba(0,0,0,0.08);
+.avatar-wrapper {
+  width: 160px;
+  height: 160px;
+  background: #f8fafc;
+  border-radius: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden; 
+  border: 1px solid #f1f5f9;
 }
 
-.avatar img {
-  width: 150px;
-  height: auto;
+.avatar-wrapper img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  transition: transform 0.3s ease;
 }
 
-.name {
-  margin-top: 18px;
-  font-size: 22px;
-  font-weight: 600;
-  letter-spacing: -0.3px;
+.user-name {
+  margin-top: 15px;
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #0f172a;
 }
 
-/* 오른쪽 영역 */
-.right {
-  flex: 1;
+.info-list { display: flex; flex-direction: column; gap: 16px; }
+.info-row { display: flex; justify-content: space-between; align-items: center; }
+.label { font-size: 0.85rem; color: #94a3b8; font-weight: 600; }
+.value { font-size: 1rem; color: #334155; }
+.value strong { color: #0f172a; font-weight: 800; }
+.value.accent strong { color: #22c55e; }
+
+.allergy-footer {
+  margin-top: 25px;
+  padding: 15px;
+  background: #fcfdfd;
+  border-radius: 12px;
+  border: 1px solid #f1f5f9;
 }
 
-.section-title {
-  margin: 0 0 22px;
-  font-size: 20px;
-  font-weight: 600;
-  letter-spacing: -0.4px;
+.allergy-footer .text {
+  margin-top: 5px;
+  font-size: 0.9rem;
+  color: #64748b;
+  line-height: 1.4;
 }
 
-/* 정보 그리드 */
-.info-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 22px 28px;
-}
-
-.item {
+/* ✅ 추가된 버튼 그룹 스타일 */
+.profile-action-group {
+  margin-top: 30px;
   display: flex;
   flex-direction: column;
+  gap: 12px;
 }
 
-.label {
-  font-size: 14px;
-  color: #777;
+.action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 16px;
+  font-weight: 800;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
 }
 
-.value {
-  font-size: 18px;
-  font-weight: 600;
+.secondary-btn {
+  background: #f8fafc;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
 }
 
-.unit {
-  margin-left: 4px;
-  font-size: 14px;
-  color: #777;
+.primary-btn {
+  background: #0f172a;
+  color: white;
 }
 
-/* 알러지 */
-.allergy-box {
-  margin-top: 28px;
-  padding-top: 18px;
-  border-top: 1px solid #eee;
+.action-btn:hover {
+  transform: translateY(-2px);
 }
 
-.allergy-label {
-  display: block;
-  font-size: 14px;
-  color: #999;
-  margin-bottom: 6px;
+.primary-btn:hover {
+  background: #22c55e;
+  box-shadow: 0 8px 15px rgba(34, 197, 94, 0.2);
 }
 
-.allergy-text {
-  font-size: 15px;
-  color: #444;
+.secondary-btn:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
 }
 </style>
