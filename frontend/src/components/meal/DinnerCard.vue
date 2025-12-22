@@ -1,6 +1,6 @@
 <template>
   <section class="dinner-card-wrapper">
-    <!-- 🔹 STEP 1 : 점심 선택 -->
+    <!-- 🔹 STEP 1: 점심 선택 -->
     <div v-if="step === 'select'" class="dinner-card">
       <h3 class="title">점심을 선택해주세요</h3>
 
@@ -26,84 +26,87 @@
       <button class="retry-btn" @click="$emit('close')">닫기</button>
     </div>
 
-    <!-- 🔹 STEP 2 : 로딩 -->
+    <!-- 🔹 STEP 2: 로딩 -->
     <div v-else-if="step === 'loading'" class="dinner-card loading">
       <div class="pulse-loader"></div>
       <p class="loading-text">AI가 저녁 메뉴를 고민 중이에요</p>
     </div>
 
-    <!-- 🔹 STEP 3 : 결과 -->
-<div v-else class="dinner-card result">
-  <h3 class="title">🍽 추천 저녁 메뉴</h3>
+    <!-- 🔹 STEP 3: 결과 -->
+    <div v-else class="dinner-card result">
+      <h3 class="title">🍽 추천 저녁 메뉴</h3>
 
-  <p class="menu-name">{{ dinnerMenu }}</p>
+      <p class="menu-name">{{ dinnerMenu }}</p>
 
-  <div class="reason-box">
-    <h4>추천 이유</h4>
-    <p>{{ reason }}</p>
-  </div>
+      <div class="reason-box">
+        <h4>추천 이유</h4>
+        <div v-html="renderedReason"></div> <!-- 마크다운을 HTML로 변환하여 출력 -->
+      </div>
 
-  <!-- 🔥 상태 메시지 -->
-  <p
-    v-if="isEaten === true"
-    class="eat-status success"
-  >
-    ✅ 목표에 한걸음 더 다가갔어요!
-  </p>
+      <p v-if="isEaten === true" class="eat-status success">
+        ✅ 목표에 한걸음 더 다가갔어요!
+      </p>
 
-  <p
-    v-else-if="isEaten === false"
-    class="eat-status skip"
-  >
-    ⏸ 오늘은 저녁을 건너뛰었어요
-  </p>
+      <p v-else-if="isEaten === false" class="eat-status skip">
+        ⏸ 오늘은 저녁을 건너뛰었어요
+      </p>
 
-  <!-- 🔥 액션 버튼 -->
-  <div class="eat-actions">
-    <button
-      class="eat-btn yes"
-      :class="{ active: isEaten === true }"
-      @click="updateDinner(true)"
-    >
-      먹었어요
-    </button>
+      <div class="eat-actions">
+        <button
+          class="eat-btn yes"
+          :class="{ active: isEaten === true }"
+          @click="updateDinner(true)"
+        >
+          먹을래요!
+        </button>
 
-    <button
-      class="eat-btn no"
-      :class="{ active: isEaten === false }"
-      @click="updateDinner(false)"
-    >
-      안 먹었어요
-    </button>
-  </div>
-</div>
-
+        <button
+          class="eat-btn no"
+          :class="{ active: isEaten === false }"
+          @click="updateDinner(false)"
+        >
+          오늘은 스킵할래요!
+        </button>
+      </div>
+    </div>
   </section>
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue"
-import axios from "axios"
-import { useMealStore } from "@/stores/mealStore"
-import { useAuthStore } from "@/stores/auth"
+import { ref, onMounted, computed } from "vue";
+import axios from "axios";
+import { useMealStore } from "@/stores/mealStore";
+import { useAuthStore } from "@/stores/auth";
+import MarkdownIt from "markdown-it"; // markdown-it 라이브러리 불러오기
 
 const props = defineProps({
   date: {
     type: String,
     required: true
   }
-})
+});
 
-const mealStore = useMealStore()
-const authStore = useAuthStore()
+const mealStore = useMealStore();
+const authStore = useAuthStore();
 
-const step = ref("loading")
-const dinnerMenu = ref("")
-const reason = ref("")
-const dinnerId = ref(null)
-const isEaten = ref(null)
+const step = ref("loading");
+const dinnerMenu = ref("");
+const reason = ref("");
+const cardNews = ref(""); // 카드뉴스 데이터 저장
+const dinnerId = ref(null);
+const isEaten = ref(null);
 
+// 마크다운을 HTML로 변환하는 computed 속성
+const renderedReason = computed(() => {
+  const md = new MarkdownIt();
+  return md.render(reason.value); // 마크다운을 HTML로 변환하여 반환
+});
 
+// 카드뉴스 마크다운 변환
+const renderedCardNews = computed(() => {
+  const md = new MarkdownIt();
+  return md.render(cardNews.value); // 카드뉴스 마크다운을 HTML로 변환하여 반환
+});
 
 /* 🔥 이미 추천된 저녁 조회 */
 const fetchExistingDinner = async () => {
@@ -112,51 +115,57 @@ const fetchExistingDinner = async () => {
       "http://localhost:8000/meal/recommend-dinner/",
       { date: props.date },
       { headers: authStore.getAuthHeader() }
-    )
+    );
 
+    // 기존 추천 데이터가 있다면
     if (res.data?.cached) {
-      dinnerId.value = res.data.dinner_id
-      dinnerMenu.value = res.data.ai_menu
-      reason.value = res.data.reason
-      isEaten.value = res.data.is_eaten
-      step.value = "result"
-      return
+      // 중복되지 않게 기존 데이터를 상태에 할당
+      dinnerId.value = res.data.dinner_id;
+      dinnerMenu.value = res.data.ai_menu;
+      reason.value = res.data.reason;
+      cardNews.value = res.data.card_news; // 백엔드에서 받은 카드뉴스 추가
+      isEaten.value = res.data.is_eaten;
+      step.value = "result";
+      return;  // 이미 데이터가 있으면 그만 실행
     }
-  } catch {}
+  } catch (error) {
+    console.error("추천 데이터를 가져오는 데 실패했습니다.", error);
+  }
 
-  step.value = "select"
-}
+  step.value = "select";  // 기존 데이터가 없으면 점심 선택 화면으로
+};
 
 /* 점심 선택 */
 const selectLunch = async (mealId) => {
-  step.value = "loading"
+  step.value = "loading";  // 로딩 화면 표시
 
   const selectRes = await axios.post(
     "http://localhost:8000/meal/select-meal/",
     { meal_id: mealId },
     { headers: authStore.getAuthHeader() }
-  )
+  );
 
   const dinnerRes = await axios.post(
     "http://localhost:8000/meal/recommend-dinner/",
     { user_selected_meal_id: selectRes.data.user_selected_meal_id },
     { headers: authStore.getAuthHeader() }
-  )
+  );
 
-  dinnerId.value = dinnerRes.data.dinner_id
-  dinnerMenu.value = dinnerRes.data.ai_menu
-  reason.value = dinnerRes.data.reason
-  isEaten.value = dinnerRes.data.is_eaten ?? null
+  // 새로 받은 추천 데이터로 상태 업데이트
+  dinnerId.value = dinnerRes.data.dinner_id;
+  dinnerMenu.value = dinnerRes.data.ai_menu;
+  reason.value = dinnerRes.data.reason;
+  isEaten.value = dinnerRes.data.is_eaten ?? null;
 
-  step.value = "result"
-}
+  step.value = "result";  // 추천 결과 화면으로 변경
+};
 
 /* 먹었음 / 안 먹었음 */
 const updateDinner = async (value) => {
   // 이미 같은 값이면 그냥 리턴 (UX 안정화)
-  if (isEaten.value === value) return
+  if (isEaten.value === value) return;
 
-  isEaten.value = value
+  isEaten.value = value;
 
   await axios.post(
     "http://localhost:8000/meal/dinner/status/",
@@ -165,18 +174,14 @@ const updateDinner = async (value) => {
       is_eaten: value
     },
     { headers: authStore.getAuthHeader() }
-  )
-}
+  );
+};
 
-
-onMounted(fetchExistingDinner)
+onMounted(fetchExistingDinner);
 </script>
 
-
 <style scoped>
-
 /* 기존 스타일 유지 + 버튼만 정리 */
-
 
 @import url('https://fonts.googleapis.com/icon?family=Material+Icons');
 
@@ -230,6 +235,27 @@ onMounted(fetchExistingDinner)
 }
 
 .reason-box p {
+  color: #475569;
+  font-weight: 600;
+  line-height: 1.6;
+}
+
+/* 카드뉴스 */
+.card-news {
+  background: #f0fdf4;
+  border-radius: 20px;
+  padding: 24px;
+  text-align: left;
+  margin-bottom: 30px;
+}
+
+.card-news h3 {
+  font-size: 1rem;
+  font-weight: 900;
+  color: #0f172a;
+}
+
+.card-news p {
   color: #475569;
   font-weight: 600;
   line-height: 1.6;
@@ -339,6 +365,7 @@ onMounted(fetchExistingDinner)
   transform: translateX(6px);
   color: #22c55e;
 }
+
 .eat-actions {
   display: flex;
   gap: 12px;
@@ -376,31 +403,4 @@ onMounted(fetchExistingDinner)
 .eat-status.skip {
   color: #64748b;
 }
-
-.eat-btn {
-  padding: 14px 22px;
-  border-radius: 16px;
-  border: none;
-  font-weight: 800;
-  cursor: pointer;
-  opacity: 0.6;
-  transition: all 0.2s;
-}
-
-.eat-btn.active {
-  opacity: 1;
-  transform: scale(1.05);
-}
-
-.eat-btn.yes {
-  background: #22c55e;
-  color: white;
-}
-
-.eat-btn.no {
-  background: #e5e7eb;
-  color: #0f172a;
-}
-
-
 </style>
