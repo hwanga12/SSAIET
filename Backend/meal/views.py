@@ -340,8 +340,8 @@ def recommend_dinner(request):
     })
 
 
-
-@api_view(['POST'])
+ 
+@api_view(['POST'])  
 @permission_classes([IsAuthenticated])
 @authentication_classes([JWTAuthentication])
 def select_meal(request):

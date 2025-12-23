@@ -52,25 +52,12 @@
                 <label>아이디</label>
                 <input 
                   v-model="form.username" 
-                  placeholder="아이디를 입력하세요"
+                  placeholder="영문 소문자와 숫자만 입력 가능합니다"
                   class="custom-input"
                   :class="{ 'input-error': errors.username }"
                   @input="clearError('username')"
                 />
                 <p v-if="errors.username" class="error-msg">{{ errors.username }}</p>
-              </div>
-
-              <div class="input-field">
-                <label>이메일</label>
-                <input 
-                  type="email"
-                  v-model="form.email" 
-                  placeholder="ssafy@example.com"
-                  class="custom-input"
-                  :class="{ 'input-error': errors.email }"
-                  @input="clearError('email')"
-                />
-                <p v-if="errors.email" class="error-msg">{{ errors.email }}</p>
               </div>
 
               <div class="input-field">
@@ -86,16 +73,19 @@
                 <p v-if="errors.password" class="error-msg">{{ errors.password }}</p>
               </div>
 
-              <button type="submit" class="signup-btn" :disabled="isLoading">
-                <span v-if="!isLoading" class="btn-text">가입 완료</span>
-                <span v-else class="btn-text">처리 중...</span>
-                <span class="material-icons">arrow_forward</span>
-              </button>
-            </form>
+              <div class="action-group">
+                <button type="submit" class="signup-btn" :disabled="isLoading">
+                  <span v-if="!isLoading" class="btn-text">가입 완료</span>
+                  <span v-else class="btn-text">처리 중...</span>
+                  <span class="material-icons">arrow_forward</span>
+                </button>
 
-            <p class="terms-text">
-              가입 시 <span>이용약관</span> 및 <span>개인정보처리방침</span>에 동의하게 됩니다.
-            </p>
+                <button type="button" class="home-btn" @click="goHome">
+                  <span class="material-icons">home</span>
+                  <span class="btn-text">메인페이지로 돌아가기</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
 
@@ -116,14 +106,12 @@ const isLoading = ref(false)
 
 const form = reactive({
   username: "",
-  email: "",
   password: "",
   name: "",
 })
 
 const errors = reactive({
   username: "",
-  email: "",
   password: "",
   name: "",
 })
@@ -149,7 +137,9 @@ const submitSignup = async () => {
     if (!data) return
     
     Object.entries(data).forEach(([field, messages]) => {
-      errors[field] = Array.isArray(messages) ? messages[0] : messages
+      if (errors.hasOwnProperty(field)) {
+        errors[field] = Array.isArray(messages) ? messages[0] : messages
+      }
     })
   } finally {
     isLoading.value = false
@@ -201,7 +191,7 @@ const goHome = () => router.push("/")
   overflow: hidden; 
 }
 
-/* 왼쪽 비주얼 (화이트 테마) */
+/* 왼쪽 비주얼 */
 .visual-side { 
   flex: 1; 
   background: #f8fafc; 
@@ -240,11 +230,17 @@ const goHome = () => router.push("/")
 }
 .custom-input:focus { outline: none; border-color: #22c55e; box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.1); }
 
-/* 에러 스타일 */
 .input-error { border-color: #ef4444 !important; background: #fffcfc; }
 .error-msg { font-size: 12px; color: #ef4444; font-weight: 600; margin-left: 4px; }
 
-/* 버튼 */
+/* 버튼 그룹 */
+.action-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 10px;
+}
+
 .signup-btn {
   width: 100%;
   height: 56px;
@@ -260,10 +256,31 @@ const goHome = () => router.push("/")
   gap: 10px;
   cursor: pointer;
   transition: 0.3s;
-  margin-top: 10px;
 }
 .signup-btn:hover:not(:disabled) { background: #22c55e; transform: translateY(-2px); box-shadow: 0 10px 20px rgba(34, 197, 94, 0.2); }
 
-.terms-text { margin-top: 20px; font-size: 12px; color: #94a3b8; text-align: center; }
+.home-btn {
+  width: 100%;
+  height: 52px;
+  background: white;
+  color: #64748b;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.home-btn:hover {
+  background: #f8fafc;
+  color: #0f172a;
+  border-color: #cbd5e1;
+}
+
+.terms-text { margin-top: 24px; font-size: 12px; color: #94a3b8; text-align: center; line-height: 1.5; }
 .terms-text span { font-weight: 700; color: #64748b; text-decoration: underline; cursor: pointer; }
 </style>

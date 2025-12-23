@@ -71,10 +71,17 @@
               </div>
             </div>
 
-            <button class="login-btn" @click="handleLogin">
-              <span class="btn-text">로그인</span>
-              <span class="material-icons">login</span>
-            </button>
+            <div class="action-group">
+              <button class="login-btn" @click="handleLogin">
+                <span class="btn-text">로그인</span>
+                <span class="material-icons">login</span>
+              </button>
+              
+              <button class="home-btn" @click="goHome">
+                <span class="material-icons">home</span>
+                <span class="btn-text">메인페이지로 돌아가기</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -194,7 +201,7 @@ const goHome = () => router.push("/")
   overflow: hidden; 
 }
 
-/* 왼쪽 비주얼 (화이트 테마) */
+/* 왼쪽 비주얼 */
 .visual-side { 
   flex: 1; 
   background: #f8fafc; 
@@ -219,7 +226,7 @@ const goHome = () => router.push("/")
 .signup-link { color: #22c55e; font-weight: 800; cursor: pointer; margin-left: 5px; }
 
 /* 입력 필드 */
-.input-group { display: flex; flex-direction: column; gap: 18px; margin-bottom: 30px; }
+.input-group { display: flex; flex-direction: column; gap: 18px; margin-bottom: 25px; }
 .input-field { display: flex; flex-direction: column; gap: 6px; }
 .input-field label { font-size: 14px; font-weight: 700; color: #1e293b; margin-left: 4px; }
 
@@ -238,7 +245,13 @@ const goHome = () => router.push("/")
 .error-msg { font-size: 12px; color: #ef4444; font-weight: 600; margin-left: 4px; margin-top: 2px; }
 .mt-1 { margin-top: 4px; }
 
-/* 버튼 (딥 블랙 & 그린 호버) */
+/* 버튼 그룹 */
+.action-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .login-btn {
   width: 100%;
   height: 54px;
@@ -256,6 +269,29 @@ const goHome = () => router.push("/")
   transition: 0.2s;
 }
 .login-btn:hover { background: #22c55e; transform: translateY(-2px); box-shadow: 0 10px 20px rgba(34, 197, 94, 0.2); }
+
+/* 메인페이지 버튼 스타일 */
+.home-btn {
+  width: 100%;
+  height: 50px;
+  background: white;
+  color: #64748b;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.home-btn:hover {
+  background: #f8fafc;
+  color: #0f172a;
+  border-color: #cbd5e1;
+}
 
 .material-icons { font-size: 18px; }
 </style>

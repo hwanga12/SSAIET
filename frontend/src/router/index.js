@@ -103,15 +103,18 @@ const router = createRouter({
 // ==========================
 // ✅ Navigation Guard
 // ==========================
-router.beforeEach((to, from, next) => {
+// router/index.js 수정
+router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore()
-  const isLoggedIn = authStore.accessToken !== null
+  const isLoggedIn = !!authStore.accessToken
 
   if (to.meta.requiresAuth && !isLoggedIn) {
-    return next({ name: "Login", replace: true })
+    return next({ name: 'Login' })
   }
 
-  return next()
+  // 기존의 '무조건 리다이렉트' 로직을 제거하거나 주석 처리합니다.
+  // 사용자가 메인으로 가고 싶다면 일단 보내줍니다.
+  next()
 })
 
 export default router

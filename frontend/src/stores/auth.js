@@ -1,12 +1,21 @@
 import { defineStore } from "pinia"
 import axios from "axios"
 
-export const useAuthStore = defineStore("auth", {
+export const useAuthStore = defineStore('auth', {
     state: () => ({
-        accessToken: localStorage.getItem("accessToken") || null,
-        isLoggedIn: !!localStorage.getItem("accessToken"),
-        user: JSON.parse(localStorage.getItem("user")) || null,
+        // 토큰 키 이름을 'accessToken'으로 통일합니다.
+        accessToken: localStorage.getItem('accessToken') || null,
+        user: JSON.parse(localStorage.getItem('user') || 'null'),
+        isLoggedIn: !!localStorage.getItem('accessToken'),
     }),
+
+    getters: {
+        // 🔥 사용자가 프로필(키, 몸무게 등)을 입력했는지 확인하는 게터
+        // 필수 값인 height나 current_weight가 없으면 false를 반환합니다.
+        isProfileComplete: (state) => {
+            return !!(state.user && state.user.height && state.user.current_weight);
+        }
+    },
 
     actions: {
         // ----------------------------------------
@@ -24,8 +33,9 @@ export const useAuthStore = defineStore("auth", {
                 this.isLoggedIn = true
                 localStorage.setItem("accessToken", token)
 
-                // 🔥 로그인 후에는 항상 me API로 사용자 정보 조회
-                await this.fetchMyProfile()
+                // 🔥 로그인 직후의 유저 정보(res.data)를 바로 저장
+                this.user = res.data
+                localStorage.setItem("user", JSON.stringify(res.data))
 
                 return true
             } catch (error) {
@@ -36,7 +46,7 @@ export const useAuthStore = defineStore("auth", {
         },
 
         // ----------------------------------------
-        // ⭐ 2. 내 프로필 조회 (🔥 핵심 추가)
+        // ⭐ 2. 내 프로필 조회
         // ----------------------------------------
         async fetchMyProfile() {
             if (!this.accessToken) return
@@ -50,9 +60,6 @@ export const useAuthStore = defineStore("auth", {
                 this.user = res.data
                 localStorage.setItem("user", JSON.stringify(res.data))
             } catch (error) {
-                console.error("프로필 조회 실패:", error)
-
-                // 토큰 만료 등 인증 문제면 로그아웃
                 if (error.response?.status === 401) {
                     this.logOut()
                 }
@@ -60,15 +67,42 @@ export const useAuthStore = defineStore("auth", {
         },
 
         // ----------------------------------------
-        // ⭐ 3. 로그아웃
+        // ⭐ 3. 프로필 수정 (입력 완료 시 호출)
+        // ----------------------------------------
+        async updateProfile(payload) {
+            try {
+                const res = await axios.put(
+                    "http://localhost:8000/api/accounts/me/update/",
+                    payload,
+                    { headers: this.getAuthHeader() }
+                );
+
+                // 🔥 수정 성공 후 최신 정보를 다시 가져와서 state 업데이트
+                await this.fetchMyProfile();
+                return res.data;
+            } catch (error) {
+                if (error.response?.status === 401) {
+                    this.logOut();
+                    window.location.href = "/login";
+                }
+                throw error;
+            }
+        },
+
+        // ----------------------------------------
+        // ⭐ 4. 로그아웃 (초기화)
         // ----------------------------------------
         logOut() {
             this.accessToken = null
             this.user = null
             this.isLoggedIn = false
-
             localStorage.removeItem("accessToken")
             localStorage.removeItem("user")
+        },
+
+        getAuthHeader() {
+            const token = this.accessToken || localStorage.getItem("accessToken");
+            return token ? { Authorization: `Bearer ${token}` } : {}
         },
 
         // ----------------------------------------

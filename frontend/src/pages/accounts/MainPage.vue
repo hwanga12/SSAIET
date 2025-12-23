@@ -32,31 +32,11 @@
         </div>
       </Transition>
     </main>
-
-    <footer class="main-footer">
-      <div class="footer-inner">
-        <div class="footer-top">
-          <img src="@/assets/1.png" alt="SSAIET" class="footer-logo" />
-          <nav class="footer-nav">
-            <a href="#">ABOUT</a>
-            <a href="#">TERMS</a>
-            <a href="#">PRIVACY</a>
-            <a href="#">CONTACT</a>
-          </nav>
-        </div>
-        <div class="footer-bottom">
-          <p class="copyright">&copy; 2025 SSAIET. Dedicated to SSAFY Excellence.</p>
-          <div class="social-icons">
-            <span class="material-icons">share</span>
-            <span class="material-icons">language</span>
-          </div>
-        </div>
-      </div>
-    </footer>
   </div>
 </template>
 
 <script setup>
+/* 로직 100% 동일 */
 import { onMounted } from "vue"
 import { useAuthStore } from "@/stores/auth"
 import { useRouter, useRoute } from "vue-router"
@@ -87,6 +67,7 @@ onMounted(() => {
 const scrollToMeal = () => {
   const element = document.getElementById('today-meal-section');
   if (element) {
+    // 🛠 네비바 높이를 고려하여 스크롤 오프셋을 120으로 조정 (안 가려지게)
     const offset = 120; 
     const elementPosition = element.getBoundingClientRect().top + window.pageYOffset;
     window.scrollTo({
@@ -100,7 +81,6 @@ const scrollToMeal = () => {
 <style scoped>
 @import url('https://fonts.googleapis.com/icon?family=Material+Icons');
 
-/* 레이아웃 기본: 프리미엄 화이트 */
 .main-layout {
   min-height: 100vh;
   background-color: #ffffff;
@@ -109,21 +89,27 @@ const scrollToMeal = () => {
   color: #1a1a1a;
 }
 
+/* 🛠 Navbar 고정 설정 */
 .fixed-navbar {
-  position: sticky;
+  position: fixed;
   top: 0;
-  z-index: 100;
-  background: rgba(255, 255, 255, 0.8);
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid #f2f2f2;
 }
 
-.main-content { flex: 1; }
+/* 🛠 중요: 고정된 네비바의 높이(약 70px~80px)만큼 컨텐츠를 아래로 밀어줌 */
+.main-content { 
+  flex: 1; 
+  padding-top: 80px; 
+}
 
-/* 식단 섹션 스타일 */
 .meal-wrapper {
   padding: 80px 0 120px;
-  background-color: #fcfcfc; /* 미세한 화이트 대비 */
+  background-color: #f8fafc;
 }
 
 .section-inner {
@@ -132,7 +118,6 @@ const scrollToMeal = () => {
   padding: 0 20px;
 }
 
-/* 프리미엄 구분선 디자인 */
 .premium-divider {
   display: flex;
   align-items: center;
@@ -143,108 +128,37 @@ const scrollToMeal = () => {
 
 .line {
   flex: 1;
-  height: 1px;
-  background: #e5e5e5;
+  height: 2px;
+  background: linear-gradient(to right, #164e33, #22c55e, #164e33);
 }
 
 .divider-content {
   text-align: center;
   padding: 0 40px;
-  position: relative;
 }
 
 .top-tag {
   display: block;
-  font-size: 0.75rem;
+  font-size: 0.85rem;
   font-weight: 800;
-  color: #164e33; /* 프리미엄 그린 */
+  color: #22c55e;
   letter-spacing: 4px;
   margin-bottom: 8px;
 }
 
 .divider-title {
-  font-size: 1.85rem;
+  font-size: 2.2rem;
   font-weight: 900;
-  color: #000;
+  color: #0f172a;
   margin: 0;
-  letter-spacing: -0.5px;
+  letter-spacing: -1px;
 }
 
 .leaf-icon {
   margin-top: 15px;
-  color: #164e33;
+  color: #22c55e;
 }
 
-.leaf-icon .material-icons { font-size: 24px; opacity: 0.8; }
-
-/* 푸터 디자인: 프리미엄 화이트 & 그레이 */
-.main-footer {
-  padding: 100px 0 60px;
-  background: #ffffff;
-  border-top: 1px solid #f0f0f0;
-}
-
-.footer-inner {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 0 20px;
-}
-
-.footer-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 60px;
-}
-
-.footer-logo {
-  height: 32px;
-  filter: contrast(0.1); /* 로고 무채색화 */
-  opacity: 0.6;
-}
-
-.footer-nav {
-  display: flex;
-  gap: 30px;
-}
-
-.footer-nav a {
-  text-decoration: none;
-  color: #888;
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 1px;
-  transition: color 0.3s;
-}
-
-.footer-nav a:hover { color: #164e33; }
-
-.footer-bottom {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-top: 40px;
-  border-top: 1px solid #f7f7f7;
-}
-
-.copyright {
-  color: #b0b0b0;
-  font-size: 0.8rem;
-  font-weight: 500;
-}
-
-.social-icons {
-  display: flex;
-  gap: 20px;
-  color: #d0d0d0;
-}
-
-.social-icons .material-icons {
-  font-size: 20px;
-  cursor: pointer;
-}
-
-/* 애니메이션 */
 .section-fade-enter-active {
   transition: all 1.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -252,11 +166,5 @@ const scrollToMeal = () => {
 .section-fade-enter-from {
   opacity: 0;
   transform: translateY(50px);
-}
-
-@media (max-width: 768px) {
-  .footer-top { flex-direction: column; gap: 40px; }
-  .divider-title { font-size: 1.4rem; }
-  .footer-nav { gap: 15px; }
 }
 </style>

@@ -39,8 +39,8 @@
             <h3 class="menu-title">{{ mainMenuName }}</h3>
             
             <div class="interaction-hint">
-              <span class="material-icons">sync_alt</span>
-              <span>식단 상세 확인</span>
+              <span class="material-icons">touch_app</span>
+              <span>터치하여 구성 보기</span>
             </div>
           </div>
         </div>
@@ -48,8 +48,8 @@
         <div class="card-face card-back">
           <div class="back-header">
             <div class="header-main">
-              <span class="back-type-label">{{ mealTypeLabel }} 메뉴</span>
-              <h4 class="back-title">식단 구성</h4>
+              <span class="back-type-label">{{ mealTypeLabel }} 코스</span>
+              <h4 class="back-title">식단 상세 구성</h4>
             </div>
             <div class="back-score-summary">
               <span class="s-label">P-SCORE</span>
@@ -74,12 +74,12 @@
 
           <div class="back-footer">
             <div class="footer-summary">
-              <span class="label">Total</span>
+              <span class="label">총 열량</span>
               <span class="val"><strong>{{ totalCalorie }}</strong> kcal</span>
             </div>
-            <button class="return-btn">
-              <span class="material-icons">refresh</span>
-              사진으로 돌아가기
+            <button class="return-btn" @click.stop="toggleFlip">
+              <span class="material-icons">flip_camera_android</span>
+              메뉴 사진 보기
             </button>
           </div>
         </div>
@@ -89,6 +89,7 @@
 </template>
 
 <script setup>
+/* 로직 100% 보존 */
 import { ref, computed } from "vue"
 
 const props = defineProps({
@@ -110,106 +111,139 @@ const totalCalorie = computed(() => {
 </script>
 
 <style scoped>
-/* 프리미엄 화이트 & 연초록 테마 변수 */
+@import url('https://fonts.googleapis.com/icon?family=Material+Icons');
+
 .meal-card-wrapper {
-  --mint-green: #4ade80; /* 밝고 건강한 연초록 */
-  --soft-green: #f0fdf4; /* 연초록 배경 */
-  --deep-green: #166534; /* 텍스트 강조용 */
-  --white: #ffffff;
+  --brand-green: #22c55e;
+  --dark-slate: #0f172a;
+  --light-bg: #f8fafc;
   width: 100%;
   max-width: 380px;
   margin: 0 auto;
 }
 
-.card-perspective { perspective: 1500px; height: 500px; }
+.card-perspective { perspective: 2000px; height: 500px; }
+
 .flip-card {
   position: relative; width: 100%; height: 100%;
   transform-style: preserve-3d;
-  transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+  transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   cursor: pointer;
 }
 .flip-card.is-flipped { transform: rotateY(180deg); }
 
 .card-face {
   position: absolute; inset: 0; backface-visibility: hidden;
-  border-radius: 32px; background: var(--white); overflow: hidden;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.04);
-  border: 1px solid #f0f0f0;
+  border-radius: 40px; background: white; overflow: hidden;
+  box-shadow: 0 15px 45px rgba(0,0,0,0.06);
+  border: 1px solid rgba(0,0,0,0.03);
   display: flex; flex-direction: column;
 }
 
-/* --- 앞면 디자인 --- */
+/* --- 앞면 디자인 (Visual) --- */
 .card-top-bar {
-  position: absolute; top: 20px; left: 20px; right: 20px;
-  z-index: 10; display: flex; justify-content: space-between; align-items: center;
+  position: absolute; top: 24px; left: 24px; right: 24px;
+  z-index: 10; display: flex; justify-content: space-between; align-items: flex-start;
 }
 
 .type-badge {
-  display: flex; align-items: center; gap: 5px;
-  padding: 6px 14px; border-radius: 12px;
-  background: var(--white); color: var(--deep-green);
-  font-size: 0.8rem; font-weight: 800;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-  border: 1px solid var(--soft-green);
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 16px; border-radius: 14px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(4px);
+  color: var(--dark-slate);
+  font-size: 0.85rem; font-weight: 800;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
 }
+.type-badge.A { color: #166534; }
+.type-badge.B { color: #854d0e; }
 
 .premium-pscore {
-  background: var(--mint-green);
-  padding: 4px 12px; border-radius: 12px;
+  background: var(--dark-slate);
+  padding: 6px 14px; border-radius: 16px;
   display: flex; flex-direction: column; align-items: center;
-  color: white;
+  color: var(--brand-green);
+  box-shadow: 0 8px 16px rgba(15, 23, 42, 0.2);
 }
-.premium-pscore .label { font-size: 0.55rem; font-weight: 900; opacity: 0.9; }
-.premium-pscore .value { font-size: 1.1rem; font-weight: 900; }
+.premium-pscore .label { font-size: 0.55rem; font-weight: 900; color: white; opacity: 0.7; margin-bottom: 2px; }
+.premium-pscore .value { font-size: 1.2rem; font-weight: 900; }
 
-.meal-photo-area { height: 60%; background-size: cover; background-position: center; position: relative; background-color: var(--soft-green); }
-.empty-photo { height: 100%; display: flex; align-items: center; justify-content: center; color: var(--mint-green); }
-.empty-icon-box { width: 50px; height: 50px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+.meal-photo-area { 
+  height: 65%; background-size: cover; background-position: center; 
+  position: relative; background-color: #f1f5f9; 
+}
+.empty-photo { height: 100%; display: flex; align-items: center; justify-content: center; }
+.empty-icon-box { 
+  width: 60px; height: 60px; background: white; border-radius: 50%; 
+  display: flex; align-items: center; justify-content: center; color: #cbd5e1;
+}
 
-.photo-overlay { position: absolute; inset: 0; background: linear-gradient(to bottom, transparent 40%, var(--white) 100%); }
+.photo-overlay { 
+  position: absolute; inset: 0; 
+  background: linear-gradient(to bottom, transparent 30%, rgba(255,255,255,0.8) 70%, white 100%); 
+}
 
-.meal-content { flex: 1; padding: 0 24px 24px; display: flex; flex-direction: column; align-items: center; }
+.meal-content { flex: 1; padding: 0 30px 30px; display: flex; flex-direction: column; align-items: center; margin-top: -10px; z-index: 2; }
 .calorie-pill {
-  background: var(--soft-green); color: var(--deep-green); padding: 4px 12px; border-radius: 100px;
-  font-size: 0.85rem; font-weight: 700; display: flex; align-items: center; gap: 4px; margin-bottom: 8px;
+  background: #f0fdf4; color: #166534; padding: 6px 16px; border-radius: 100px;
+  font-size: 0.9rem; font-weight: 800; display: flex; align-items: center; gap: 5px; margin-bottom: 12px;
 }
-.calorie-pill .material-icons { font-size: 14px; }
+.calorie-pill .material-icons { font-size: 16px; color: var(--brand-green); }
 
 .menu-title {
-  font-size: 1.5rem; font-weight: 800; color: #1a1a1a;
-  margin: 4px 0 10px; text-align: center; line-height: 1.3;
+  font-size: 1.6rem; font-weight: 900; color: var(--dark-slate);
+  margin: 0 0 15px; text-align: center; line-height: 1.25; letter-spacing: -0.5px;
 }
 
-.interaction-hint { margin-top: auto; color: #aaa; font-size: 0.8rem; display: flex; align-items: center; gap: 4px; font-weight: 600; }
+.interaction-hint { 
+  margin-top: auto; color: #94a3b8; font-size: 0.85rem; 
+  display: flex; align-items: center; gap: 5px; font-weight: 700;
+  background: #f8fafc; padding: 6px 14px; border-radius: 10px;
+}
 
-/* --- 뒷면 디자인 --- */
-.card-back { transform: rotateY(180deg); background: var(--white); }
+/* --- 뒷면 디자인 (Details) --- */
+.card-back { transform: rotateY(180deg); background: white; }
 .back-header {
-  padding: 24px; display: flex; justify-content: space-between; align-items: center;
-  border-bottom: 1px solid #f9f9f9;
+  padding: 30px 24px; display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #f1f5f9; background: #fafafa;
 }
-.back-type-label { font-size: 0.75rem; color: var(--mint-green); font-weight: 800; }
-.back-title { font-size: 1.2rem; color: #333; margin: 0; font-weight: 800; }
-.s-label { display: block; font-size: 0.55rem; color: #ccc; font-weight: 800; text-align: right; }
-.s-value { font-size: 1.2rem; color: var(--mint-green); font-weight: 900; }
+.back-type-label { font-size: 0.8rem; color: var(--brand-green); font-weight: 900; letter-spacing: 1px; }
+.back-title { font-size: 1.3rem; color: var(--dark-slate); margin: 4px 0 0; font-weight: 900; }
+.s-label { font-size: 0.6rem; color: #94a3b8; font-weight: 900; text-align: right; }
+.s-value { font-size: 1.4rem; color: var(--brand-green); font-weight: 900; }
 
-.menu-list-container { flex: 1; padding: 16px 20px; display: flex; flex-direction: column; gap: 6px; overflow-y: auto; }
-.menu-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border-radius: 14px; background: #fcfcfc; }
-.is-main-row { background: var(--soft-green); border: 1px solid #e2fbe9; }
-.main-dot { width: 6px; height: 6px; background: var(--mint-green); border-radius: 50%; margin-right: 8px; }
-.food-name { font-weight: 600; color: #555; font-size: 0.95rem; }
-.is-main-row .food-name { color: var(--deep-green); font-weight: 800; }
-.food-cal { font-size: 0.8rem; color: #bbb; }
+.menu-list-container { 
+  flex: 1; padding: 24px; display: flex; flex-direction: column; gap: 10px; 
+  overflow-y: auto; background: white;
+}
+.menu-row { 
+  display: flex; justify-content: space-between; align-items: center; 
+  padding: 14px 18px; border-radius: 18px; background: #f8fafc;
+  transition: 0.2s;
+}
+.is-main-row { background: #f0fdf4; border: 1px solid rgba(34, 197, 94, 0.2); }
+.main-dot { width: 8px; height: 8px; background: var(--brand-green); border-radius: 50%; margin-right: 10px; }
+.food-name { font-weight: 700; color: #475569; font-size: 1rem; }
+.is-main-row .food-name { color: #166534; font-weight: 900; }
+.food-cal { font-size: 0.85rem; color: #94a3b8; font-weight: 600; }
 
-.back-footer { padding: 16px 24px 24px; }
-.footer-summary { display: flex; justify-content: space-between; margin-bottom: 16px; font-size: 0.95rem; color: #666; }
-.footer-summary strong { color: #1a1a1a; font-weight: 800; }
+.back-footer { padding: 20px 24px 30px; background: white; }
+.footer-summary { 
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 20px; font-size: 1rem; color: #64748b; font-weight: 700;
+  padding: 0 10px;
+}
+.footer-summary strong { color: var(--dark-slate); font-size: 1.2rem; font-weight: 900; }
 
 .return-btn {
-  width: 100%; padding: 14px; border-radius: 16px; border: none;
-  background: #222; color: white; font-weight: 700;
-  display: flex; align-items: center; justify-content: center; gap: 6px;
-  cursor: pointer; transition: background 0.2s;
+  width: 100%; padding: 18px; border-radius: 20px; border: none;
+  background: var(--dark-slate); color: white; font-weight: 900; font-size: 1rem;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  cursor: pointer; transition: 0.3s;
 }
-.return-btn:hover { background: var(--deep-green); }
+.return-btn:hover { background: var(--brand-green); transform: scale(1.02); }
+
+/* 스크롤바 커스텀 */
+.menu-list-container::-webkit-scrollbar { width: 4px; }
+.menu-list-container::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
 </style>

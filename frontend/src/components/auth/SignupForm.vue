@@ -52,25 +52,12 @@
                 <label>아이디</label>
                 <input 
                   v-model="form.username" 
-                  placeholder="아이디를 입력하세요"
+                  placeholder="영문 소문자와 숫자만 사용 가능해요"
                   class="custom-input"
                   :class="{ 'input-error': errors.username }"
                   @input="clearError('username')"
                 />
                 <p v-if="errors.username" class="error-msg">{{ errors.username }}</p>
-              </div>
-
-              <div class="input-field">
-                <label>이메일</label>
-                <input 
-                  type="email"
-                  v-model="form.email" 
-                  placeholder="ssafy@example.com"
-                  class="custom-input"
-                  :class="{ 'input-error': errors.email }"
-                  @input="clearError('email')"
-                />
-                <p v-if="errors.email" class="error-msg">{{ errors.email }}</p>
               </div>
 
               <div class="input-field">
@@ -92,10 +79,6 @@
                 <span class="material-icons">arrow_forward</span>
               </button>
             </form>
-
-            <p class="terms-text">
-              가입 시 <span>이용약관</span> 및 <span>개인정보처리방침</span>에 동의하게 됩니다.
-            </p>
           </div>
         </div>
 
@@ -114,16 +97,16 @@ const router = useRouter()
 const authStore = useAuthStore()
 const isLoading = ref(false)
 
+// 1. form 객체에서 email 제거
 const form = reactive({
   username: "",
-  email: "",
   password: "",
   name: "",
 })
 
+// 2. errors 객체에서 email 제거
 const errors = reactive({
   username: "",
-  email: "",
   password: "",
   name: "",
 })
@@ -131,11 +114,15 @@ const errors = reactive({
 const clearError = (field) => { errors[field] = "" }
 
 const submitSignup = async () => {
+  // 에러 초기화
   Object.keys(errors).forEach(key => errors[key] = "")
   isLoading.value = true
 
   try {
+    // 3. 서버로 보낼 때 email이 포함되지 않은 form 객체 전송
     await axios.post("http://localhost:8000/api/accounts/signup/", form)
+    
+    // 가입 성공 후 바로 로그인 시도
     const loginSuccess = await authStore.fetchAndStoreToken(form.username, form.password)
     
     if (loginSuccess) {
@@ -148,8 +135,11 @@ const submitSignup = async () => {
     const data = err.response?.data
     if (!data) return
     
+    // 4. 서버에서 온 에러 메시지 매핑 (Django에서 설정한 한글 멘트가 표시됨)
     Object.entries(data).forEach(([field, messages]) => {
-      errors[field] = Array.isArray(messages) ? messages[0] : messages
+      if (errors.hasOwnProperty(field)) {
+        errors[field] = Array.isArray(messages) ? messages[0] : messages
+      }
     })
   } finally {
     isLoading.value = false
@@ -161,6 +151,7 @@ const goHome = () => router.push("/")
 </script>
 
 <style scoped>
+/* 기존 스타일 유지 (이메일 필드만 제거되었으므로 스타일은 수정할 필요 없음) */
 @import url('https://fonts.googleapis.com/icon?family=Material+Icons');
 
 .signup-page {
@@ -174,7 +165,6 @@ const goHome = () => router.push("/")
   background: #fcfdfd;
 }
 
-/* 배경 장식 */
 .bg-decoration {
   position: absolute;
   inset: 0;
@@ -189,7 +179,6 @@ const goHome = () => router.push("/")
 .blob-green { width: 600px; height: 600px; background: #22c55e; top: -100px; right: -100px; }
 .blob-light { width: 500px; height: 500px; background: #e2e8f0; bottom: -100px; left: -100px; }
 
-/* 카드 디자인 */
 .signup-container { position: relative; z-index: 1; width: 100%; max-width: 1100px; padding: 0 20px; }
 .signup-card { 
   display: flex; 
@@ -201,7 +190,6 @@ const goHome = () => router.push("/")
   overflow: hidden; 
 }
 
-/* 왼쪽 비주얼 (화이트 테마) */
 .visual-side { 
   flex: 1; 
   background: #f8fafc; 
@@ -217,7 +205,6 @@ const goHome = () => router.push("/")
 .highlight { color: #22c55e; }
 .visual-text { font-size: 1.25rem; color: #64748b; line-height: 1.6; }
 
-/* 오른쪽 폼 */
 .form-side { flex: 1.2; background: white; display: flex; align-items: center; justify-content: center; padding: 40px; }
 .form-inner { width: 100%; max-width: 400px; }
 .form-header { margin-bottom: 30px; }
@@ -225,7 +212,6 @@ const goHome = () => router.push("/")
 .form-subtitle { font-size: 1rem; color: #64748b; }
 .login-link { color: #22c55e; font-weight: 800; cursor: pointer; margin-left: 5px; }
 
-/* 입력 필드 */
 .input-group { display: flex; flex-direction: column; gap: 14px; margin-bottom: 24px; }
 .input-field { display: flex; flex-direction: column; gap: 6px; }
 .input-field label { font-size: 13px; font-weight: 700; color: #1e293b; margin-left: 4px; }
@@ -240,11 +226,9 @@ const goHome = () => router.push("/")
 }
 .custom-input:focus { outline: none; border-color: #22c55e; box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.1); }
 
-/* 에러 스타일 */
 .input-error { border-color: #ef4444 !important; background: #fffcfc; }
 .error-msg { font-size: 12px; color: #ef4444; font-weight: 600; margin-left: 4px; }
 
-/* 버튼 */
 .signup-btn {
   width: 100%;
   height: 56px;

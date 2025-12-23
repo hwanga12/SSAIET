@@ -58,21 +58,27 @@
     </div>
 
     <div v-if="hasMealData" class="recommend-section" ref="scrollTarget">
-      <button 
-        class="action-pill-btn" 
-        :class="{ 'is-active': showDinner }"
-        @click="onClickDinnerRecommend"
-      >
-        <div class="btn-content">
-          <span class="material-icons">
-            {{ showDinner ? "keyboard_arrow_up" : "auto_fix_high" }}
-          </span>
-          <span class="btn-text">
-            {{ showDinner ? "추천 닫기" : (hasDinner ? "오늘 저녁 메뉴 보기" : "저녁 메뉴 추천 받기") }}
-          </span>
+      <div class="recommend-container">
+        <div class="recommend-guide">
+          <p class="guide-text">오늘의 영양 상태를 분석하여</p>
+          <h3 class="guide-title">완벽한 <span class="highlight">저녁 메뉴</span>를 추천해드릴까요?</h3>
         </div>
-        <div class="btn-background"></div>
-      </button>
+        
+        <button 
+          class="action-pill-btn" 
+          :class="{ 'is-active': showDinner }"
+          @click="onClickDinnerRecommend"
+        >
+          <div class="btn-content">
+            <span class="material-icons">
+              {{ showDinner ? "keyboard_arrow_up" : "auto_fix_high" }}
+            </span>
+            <span class="btn-text">
+              {{ showDinner ? "추천 닫기" : (hasDinner ? "오늘 저녁 메뉴 보기" : "저녁 메뉴 추천 받기") }}
+            </span>
+          </div>
+        </button>
+      </div>
     </div>
 
     <DinnerCard
@@ -85,7 +91,7 @@
 </template>
 
 <script setup>
-/* 로직은 기존과 동일하므로 생략 (그대로 사용하시면 됩니다) */
+/* 로직은 그대로 유지 */
 import { ref, computed, watch, nextTick } from "vue"
 import axios from "axios"
 import { useMealStore } from "@/stores/mealStore"
@@ -220,96 +226,102 @@ watch(() => route.query.date, (newDateStr) => {
 
 .meal-page {
   padding: 40px 20px 80px;
-  background: #f8fafc;
-  min-height: 100vh;
+  background: transparent;
   font-family: 'Pretendard', -apple-system, sans-serif;
 }
 
-/* 상단 네비게이션 */
+/* 상단 네비게이션 동일 */
 .header-container { max-width: 800px; margin: 0 auto 50px; }
-.date-nav-bar { display: flex; align-items: center; gap: 10px; }
+.date-nav-bar { display: flex; align-items: center; gap: 12px; }
 
 .main-date-selector {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  background: #ffffff;
-  padding: 12px 24px;
-  border-radius: 20px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
-  cursor: pointer;
-  position: relative;
-  border: 1px solid #f1f5f9;
+  flex: 1; display: flex; align-items: center; background: #ffffff;
+  padding: 14px 28px; border-radius: 24px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+  cursor: pointer; position: relative; border: 1px solid #f1f5f9;
+  transition: transform 0.2s;
 }
+.main-date-selector:hover { transform: translateY(-2px); }
 
 .calendar-icon-box {
-  width: 40px; height: 40px;
-  background: #f1f5f9; color: #475569;
-  border-radius: 12px;
-  display: flex; align-items: center; justify-content: center;
-  margin-right: 15px;
+  width: 44px; height: 44px; background: #f0fdf4; color: #22c55e;
+  border-radius: 14px; display: flex; align-items: center; justify-content: center;
+  margin-right: 18px;
 }
 
-.display-date { margin: 0; font-size: 1.2rem; font-weight: 800; color: #1e293b; }
+.display-date { margin: 0; font-size: 1.3rem; font-weight: 900; color: #0f172a; letter-spacing: -0.5px; }
 .weekday-badge {
-  font-size: 0.8rem; font-weight: 600; color: #64748b;
-  background: #f1f5f9; padding: 2px 8px; border-radius: 6px; width: fit-content;
+  font-size: 0.85rem; font-weight: 700; color: #64748b;
+  background: #f1f5f9; padding: 4px 10px; border-radius: 8px;
 }
 .weekday-badge.is-0 { color: #ef4444; background: #fee2e2; }
 .weekday-badge.is-6 { color: #2563eb; background: #dbeafe; }
 
 .nav-arrow-btn {
-  width: 48px; height: 48px; border-radius: 16px; border: none;
-  background: white; color: #94a3b8; cursor: pointer;
+  width: 52px; height: 52px; border-radius: 18px; border: none;
+  background: white; color: #64748b; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.05); transition: 0.2s;
 }
+.nav-arrow-btn:hover { background: #f8fafc; color: #0f172a; }
 
 .today-jump-btn {
-  padding: 0 16px; height: 48px; border-radius: 16px; border: none;
-  background: #334155; color: white; font-weight: 700; cursor: pointer;
+  padding: 0 20px; height: 52px; border-radius: 18px; border: none;
+  background: #0f172a; color: white; font-weight: 800; cursor: pointer;
+  transition: 0.2s;
 }
+.today-jump-btn:hover { background: #22c55e; box-shadow: 0 8px 20px rgba(34, 197, 94, 0.2); }
 
-/* 식단 카드 그리드 */
+/* ⭐ [핵심 수정] 식단 카드 그리드 확장 */
 .meal-cards-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 30px; max-width: 1000px; margin: 0 auto;
+  display: grid; 
+  /* 🛠 최소 너비를 340px -> 420px로 확장하여 카드가 커질 공간을 확보합니다 */
+  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+  gap: 40px; 
+  /* 🛠 전체 폭을 1100px -> 1200px로 확장하여 시원한 느낌을 줍니다 */
+  max-width: 1200px; 
+  margin: 0 auto;
 }
-
-.card-wrapper { position: relative; padding-top: 15px; }
-
-/* 한식/일품 강조 태그 */
 
 .empty-state-card {
-  height: 420px; background: white; border-radius: 28px;
+  height: 520px; /* MealCard의 바뀐 높이에 맞춰 조절 */
+  background: white; border-radius: 32px;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  border: 1px solid #edf2f7; text-align: center;
+  border: 1px solid #f1f5f9; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.03);
 }
 .empty-icon-circle {
-  width: 64px; height: 64px; background: #f8fafc; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center; margin-bottom: 16px;
+  width: 70px; height: 70px; background: #f8fafc; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; margin-bottom: 20px;
 }
-.empty-icon-circle .material-icons { color: #cbd5e1; font-size: 28px; }
-.empty-state-card h4 { margin: 0; color: #475569; font-weight: 700; }
-.empty-state-card p { font-size: 0.85rem; color: #94a3b8; margin-top: 6px; }
+.empty-icon-circle .material-icons { color: #cbd5e1; font-size: 32px; }
+.empty-state-card h4 { font-size: 1.4rem; color: #1e293b; font-weight: 900; margin: 0; }
+.empty-state-card p { font-size: 1rem; color: #94a3b8; margin-top: 10px; }
 
-/* 저녁 추천 버튼 */
-.recommend-section { display: flex; justify-content: center; margin-top: 50px; }
-.action-pill-btn {
-  position: relative; padding: 16px 32px; border-radius: 50px;
-  border: none; background: #1e293b; color: white;
-  cursor: pointer; overflow: hidden; transition: all 0.3s ease;
+/* 저녁 추천 섹션 */
+.recommend-section { 
+  display: flex; justify-content: center; 
+  margin-top: 100px; margin-bottom: 40px; 
 }
-.action-pill-btn:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.15); }
-.btn-content { display: flex; align-items: center; gap: 8px; position: relative; z-index: 2; }
-.btn-text { font-weight: 700; font-size: 1rem; }
-.action-pill-btn.is-active { background: #64748b; }
+.recommend-container { text-align: center; width: 100%; }
+.recommend-guide { margin-bottom: 25px; }
+.guide-text { font-size: 0.95rem; color: #64748b; font-weight: 600; margin-bottom: 6px; }
+.guide-title { font-size: 1.8rem; font-weight: 900; color: #0f172a; }
+.highlight { color: #22c55e; }
+
+.action-pill-btn {
+  position: relative; padding: 20px 50px; border-radius: 50px;
+  border: none; background: #0f172a; color: white;
+  cursor: pointer; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: 0 15px 30px rgba(15, 23, 42, 0.2);
+}
+.action-pill-btn:hover { 
+  transform: translateY(-5px) scale(1.02); 
+  background: #22c55e; 
+  box-shadow: 0 20px 40px rgba(34, 197, 94, 0.3); 
+}
+.btn-content { display: flex; align-items: center; gap: 10px; }
+.btn-text { font-weight: 800; font-size: 1.2rem; letter-spacing: -0.3px; }
+.action-pill-btn.is-active { background: #64748b; transform: scale(0.98); }
 
 .hidden-picker { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
-
-@media (max-width: 600px) {
-  .display-date { font-size: 1rem; }
-  .meal-cards-grid { grid-template-columns: 1fr; }
-}
 </style>
