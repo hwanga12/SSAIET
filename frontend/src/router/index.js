@@ -8,6 +8,8 @@ import LoginPage from "@/pages/accounts/LoginPage.vue"
 import NotFoundView from "@/pages/accounts/NotFoundView.vue"
 import MapView from '@/pages/map/MapView.vue'
 
+import WeightPredictionPage from "@/pages/calendar/WeightPredictionPage.vue";
+
 // ✅ 커뮤니티 페이지 (상세 페이지와 리스트 페이지 분류 명확화)
 const CommunityListPage = () => import("@/pages/community/CommunityPage.vue")
 const CommunityDetailPage = () => import("@/pages/community/CommunityDetailPage.vue")
@@ -47,6 +49,12 @@ const routes = [
     component: () => import("@/pages/accounts/EditAccountPage.vue"),
     meta: { requiresAuth: true },
   },
+
+  {
+  path: "/weight-prediction",
+  component: WeightPredictionPage,
+  meta: { requiresAuth: true },
+},
 
   // ==========================
   // 🌱 Community (수정된 섹션)

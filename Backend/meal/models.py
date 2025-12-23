@@ -77,3 +77,11 @@ class DinnerRecommendation(models.Model):
                 name="unique_dinner_per_lunch"
             )
         ]
+
+
+class WeightChangePrediction(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    date = models.IntegerField()
+    predicted_weight_change = models.FloatField()
+    progress_to_target = models.FloatField()
+    created_at = models.DateTimeField(auto_now_add=True)

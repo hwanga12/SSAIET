@@ -1,11 +1,14 @@
 import json
 import requests
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from meal.ml.inference import predict_weight_change
 
 from datetime import date
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
-from .models import Meal, Food, MealFood, UserSelectedMeal, DinnerRecommendation
+from .models import Meal, Food, MealFood, UserSelectedMeal, DinnerRecommendation, WeightChangePrediction
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from rest_framework.decorators import api_view, permission_classes
@@ -14,6 +17,9 @@ from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
+from django.http import JsonResponse
+from datetime import datetime
+
 
 User = get_user_model()
 
@@ -532,3 +538,68 @@ def nutrition_day_detail(request, date):
 
     serializer = NutritionDayDetailSerializer(result)
     return Response(serializer.data)
+
+
+
+
+
+# from rest_framework.decorators import api_view
+# from rest_framework.response import Response
+# from meal.ml.inference import predict_weight_change
+
+
+# from yourapp.models import User
+import torch
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def predict_weight_change_view(request):
+    user = request.user
+    starting_weight = user.current_weight
+    selected_meals = UserSelectedMeal.objects.filter(user=user)
+
+    total_calories = 0
+    total_protein = 0
+    total_carbs = 0
+    total_fat = 0
+
+    for sm in selected_meals:
+        foods = sm.meal.mealfood_set.select_related("food")
+        for f in foods:
+            total_calories += f.food.calorie
+            total_protein += f.food.protein
+            total_carbs += f.food.carbohydrate
+            total_fat += f.food.fat
+
+    # 진척도 계산
+    weight_diff = user.current_weight - user.target_weight
+    progress_to_target = ((user.target_weight - user.current_weight) / (user.target_weight - starting_weight)) * 100
+
+    feature_list = [
+        user.age,
+        1 if user.gender == "M" else 0,
+        user.height,
+        user.current_weight,
+        user.target_weight,
+        user.muscle_mass,
+        user.body_fat,
+        total_calories,
+        total_protein,
+        total_carbs,
+        total_fat,
+        selected_meals.count()
+    ]
+
+    predicted = predict_weight_change(feature_list)
+
+    WeightChangePrediction.objects.create(
+        user=user,
+        date=int(datetime.now().strftime("%Y%m%d")),
+        predicted_weight_change=predicted,
+        progress_to_target=progress_to_target  # 진척도 저장
+    )
+
+    return Response({
+        "predicted_weight_change": predicted,
+        "progress_to_target": progress_to_target
+    })
