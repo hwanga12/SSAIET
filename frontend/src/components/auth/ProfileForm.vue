@@ -25,7 +25,7 @@
 
     <!-- 📝 알러지 -->
     <div class="field">
-      <label class="field-label">알러지 정보</label>
+      <label class="field-label">알레르기 정보</label>
       <textarea
         v-model="profile.allergies"
         class="textarea-field"
