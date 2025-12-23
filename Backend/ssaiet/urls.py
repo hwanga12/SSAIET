@@ -20,4 +20,5 @@ urlpatterns = [
 
     # ✅ 커뮤니티 (이 줄 추가!!)
     path('api/community/', include('community.urls')),
+    
 ]

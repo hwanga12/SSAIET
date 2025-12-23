@@ -3,7 +3,6 @@
     <BaseNavbar class="fixed-navbar" />
 
     <main class="main-content">
-      
       <HeroSection
         :userName="authStore.isLoggedIn ? authStore.user?.name : '싸피생'"
         :imageSrc="heroImage"
@@ -14,38 +13,53 @@
       />
 
       <Transition name="section-fade">
-        <div v-if="authStore.isLoggedIn" id="today-meal-section" class="meal-wrapper">
-          <div class="section-divider">
-            <span class="divider-text">Today's Nutrition</span>
+        <div id="today-meal-section" class="meal-wrapper">
+          <div class="premium-divider">
+            <div class="line"></div>
+            <div class="divider-content">
+              <span class="top-tag">DAILY MENU</span>
+              <h2 class="divider-title">오늘의 영양 큐레이션</h2>
+              <div class="leaf-icon">
+                <span class="material-icons">eco</span>
+              </div>
+            </div>
+            <div class="line"></div>
           </div>
-          <MealSection />
-        </div>
-      </Transition>
 
-      <Transition name="section-fade">
-        <section v-if="!authStore.isLoggedIn" class="preview-section">
-          <div class="preview-banner">
-            <div class="banner-icon">🌱</div>
-            <h2>지금 바로 시작해서 <br/>건강한 <span class="highlight">SSAFY</span> 생활을 만드세요!</h2>
-            <p>식단 기록부터 식단 추천까지 SSAIET이 도와드립니다.</p>
-            <button class="banner-btn" @click="router.push('/signup')">3초만에 시작하기</button>
+          <div class="section-inner">
+            <MealSection />
           </div>
-        </section>
+        </div>
       </Transition>
     </main>
 
     <footer class="main-footer">
-      <div class="footer-content">
-        <img src="@/assets/1.png" alt="SSAIET" class="footer-logo" />
-        <p>&copy; 2025 SSAIET. All rights reserved for SSAFY Students.</p>
+      <div class="footer-inner">
+        <div class="footer-top">
+          <img src="@/assets/1.png" alt="SSAIET" class="footer-logo" />
+          <nav class="footer-nav">
+            <a href="#">ABOUT</a>
+            <a href="#">TERMS</a>
+            <a href="#">PRIVACY</a>
+            <a href="#">CONTACT</a>
+          </nav>
+        </div>
+        <div class="footer-bottom">
+          <p class="copyright">&copy; 2025 SSAIET. Dedicated to SSAFY Excellence.</p>
+          <div class="social-icons">
+            <span class="material-icons">share</span>
+            <span class="material-icons">language</span>
+          </div>
+        </div>
       </div>
     </footer>
   </div>
 </template>
 
 <script setup>
+import { onMounted } from "vue"
 import { useAuthStore } from "@/stores/auth"
-import { useRouter } from "vue-router"
+import { useRouter, useRoute } from "vue-router"
 
 import BaseNavbar from "@/components/common/BaseNavbar.vue"
 import HeroSection from "@/components/common/HeroSection.vue"
@@ -54,156 +68,195 @@ import heroImage from "@/assets/ssafy_study.png"
 
 const authStore = useAuthStore()
 const router = useRouter()
+const route = useRoute()
 
-// 추천 식단 클릭 시 식단 섹션으로 부드럽게 스크롤
+const formatDateLocal = (date) => {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, "0")
+  const d = String(date.getDate()).padStart(2, "0")
+  return `${y}-${m}-${d}`
+}
+
+onMounted(() => {
+  if (!route.query.date) {
+    const todayStr = formatDateLocal(new Date())
+    router.replace({ query: { ...route.query, date: todayStr } })
+  }
+})
+
 const scrollToMeal = () => {
   const element = document.getElementById('today-meal-section');
   if (element) {
-    element.scrollIntoView({ behavior: 'smooth' });
+    const offset = 120; 
+    const elementPosition = element.getBoundingClientRect().top + window.pageYOffset;
+    window.scrollTo({
+      top: elementPosition - offset,
+      behavior: 'smooth'
+    });
   }
 }
 </script>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/icon?family=Material+Icons');
+
+/* 레이아웃 기본: 프리미엄 화이트 */
 .main-layout {
   min-height: 100vh;
-  background-color: #fcfdfd; /* 프리미엄 화이트 톤으로 변경 */
+  background-color: #ffffff;
   display: flex;
   flex-direction: column;
+  color: #1a1a1a;
 }
 
 .fixed-navbar {
   position: sticky;
   top: 0;
   z-index: 100;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid #f2f2f2;
 }
 
-.main-content {
-  flex: 1;
-}
+.main-content { flex: 1; }
 
-/* ===== 🍱 식단 섹션 스크롤 위치 보정 ===== */
+/* 식단 섹션 스타일 */
 .meal-wrapper {
-  scroll-margin-top: 90px; /* 네브바 높이만큼 여백을 주어 제목이 가려지지 않게 함 */
-  padding-bottom: 60px;
+  padding: 80px 0 120px;
+  background-color: #fcfcfc; /* 미세한 화이트 대비 */
 }
 
-/* ===== 섹션 구분선 디자인 (SSAIET 그린 포인트) ===== */
-.section-divider {
+.section-inner {
   max-width: 1200px;
-  margin: 80px auto 30px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* 프리미엄 구분선 디자인 */
+.premium-divider {
   display: flex;
   align-items: center;
   justify-content: center;
-  position: relative;
+  margin-bottom: 60px;
+  padding: 0 40px;
 }
 
-.section-divider::before {
-  content: "";
-  position: absolute;
-  width: 100%;
+.line {
+  flex: 1;
   height: 1px;
-  background: linear-gradient(90deg, transparent, #e2e8f0, transparent);
+  background: #e5e5e5;
 }
 
-.divider-text {
-  background: #fcfdfd;
-  padding: 0 24px;
-  color: #22c55e; /* 그린으로 포인트 */
-  font-size: 0.85rem;
-  font-weight: 800;
-  letter-spacing: 3px;
-  text-transform: uppercase;
-  position: relative;
-  z-index: 1;
-}
-
-/* ===== 비로그인 안내 배너 (디자인 고도화) ===== */
-.preview-section {
-  padding: 100px 20px;
+.divider-content {
   text-align: center;
+  padding: 0 40px;
+  position: relative;
 }
 
-.preview-banner {
-  max-width: 700px;
-  margin: 0 auto;
-  padding: 60px 40px;
-  background: white;
-  border-radius: 40px;
-  border: 1px solid #f1f5f9;
-  box-shadow: 0 30px 60px rgba(0,0,0,0.05);
-}
-
-.banner-icon { font-size: 40px; margin-bottom: 20px; }
-
-.preview-banner h2 {
-  font-size: 2rem;
-  font-weight: 900;
-  color: #0f172a;
-  line-height: 1.3;
-  margin-bottom: 16px;
-}
-
-.highlight { color: #22c55e; }
-
-.preview-banner p {
-  color: #64748b;
-  font-size: 1.1rem;
-  margin-bottom: 32px;
-}
-
-.banner-btn {
-  background: #0f172a;
-  color: white;
-  padding: 16px 36px;
-  border-radius: 16px;
+.top-tag {
+  display: block;
+  font-size: 0.75rem;
   font-weight: 800;
-  border: none;
+  color: #164e33; /* 프리미엄 그린 */
+  letter-spacing: 4px;
+  margin-bottom: 8px;
+}
+
+.divider-title {
+  font-size: 1.85rem;
+  font-weight: 900;
+  color: #000;
+  margin: 0;
+  letter-spacing: -0.5px;
+}
+
+.leaf-icon {
+  margin-top: 15px;
+  color: #164e33;
+}
+
+.leaf-icon .material-icons { font-size: 24px; opacity: 0.8; }
+
+/* 푸터 디자인: 프리미엄 화이트 & 그레이 */
+.main-footer {
+  padding: 100px 0 60px;
+  background: #ffffff;
+  border-top: 1px solid #f0f0f0;
+}
+
+.footer-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.footer-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 60px;
+}
+
+.footer-logo {
+  height: 32px;
+  filter: contrast(0.1); /* 로고 무채색화 */
+  opacity: 0.6;
+}
+
+.footer-nav {
+  display: flex;
+  gap: 30px;
+}
+
+.footer-nav a {
+  text-decoration: none;
+  color: #888;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  transition: color 0.3s;
+}
+
+.footer-nav a:hover { color: #164e33; }
+
+.footer-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 40px;
+  border-top: 1px solid #f7f7f7;
+}
+
+.copyright {
+  color: #b0b0b0;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.social-icons {
+  display: flex;
+  gap: 20px;
+  color: #d0d0d0;
+}
+
+.social-icons .material-icons {
+  font-size: 20px;
   cursor: pointer;
-  transition: 0.3s;
 }
 
-.banner-btn:hover {
-  background: #22c55e;
-  transform: translateY(-3px);
-  box-shadow: 0 10px 20px rgba(34, 197, 94, 0.2);
-}
-
-/* ===== 애니메이션 ===== */
-.section-fade-enter-active,
-.section-fade-leave-active {
-  transition: all 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+/* 애니메이션 */
+.section-fade-enter-active {
+  transition: all 1.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .section-fade-enter-from {
   opacity: 0;
-  transform: translateY(40px);
+  transform: translateY(50px);
 }
 
-/* ===== 푸터 ===== */
-.main-footer {
-  padding: 60px 40px;
-  text-align: center;
-  background: #f8fafc;
-  border-top: 1px solid #f1f5f9;
-}
-
-.footer-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 20px;
-}
-
-.footer-logo {
-  height: 36px;
-  opacity: 0.6;
-  filter: grayscale(1);
-}
-
-.main-footer p {
-  color: #94a3b8;
-  font-size: 0.85rem;
-  font-weight: 500;
+@media (max-width: 768px) {
+  .footer-top { flex-direction: column; gap: 40px; }
+  .divider-title { font-size: 1.4rem; }
+  .footer-nav { gap: 15px; }
 }
 </style>

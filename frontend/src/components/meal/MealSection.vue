@@ -2,21 +2,20 @@
   <section class="meal-page">
     <div class="header-container">
       <div class="date-nav-bar">
-        <button class="glass-icon-btn" @click="goPrevDay" aria-label="이전날">
+        <button class="nav-arrow-btn" @click="goPrevDay" aria-label="이전 날짜">
           <span class="material-icons">chevron_left</span>
         </button>
 
         <div class="main-date-selector" @click="openDatePicker">
-          <div class="calendar-accent">
+          <div class="calendar-icon-box">
             <span class="material-icons">calendar_today</span>
           </div>
-          <div class="date-content">
+          <div class="date-info">
             <h2 class="display-date">{{ formattedDate }}</h2>
-            <span class="display-weekday" :class="`type-${currentDate.getDay()}`">
-              {{ weekdayLabel }}
-            </span>
+            <div class="weekday-badge" :class="`is-${currentDate.getDay()}`">
+              {{ weekdayLabel }}요일
+            </div>
           </div>
-          
           <input
             ref="dateInputRef"
             type="date"
@@ -26,274 +25,291 @@
           />
         </div>
 
-        <button class="glass-icon-btn" @click="goNextDay" aria-label="다음날">
+        <button class="nav-arrow-btn" @click="goNextDay" aria-label="다음 날짜">
           <span class="material-icons">chevron_right</span>
         </button>
 
-        <button class="today-float-btn" @click="goToday">
-          <span class="material-icons">event</span>
-          <span>Today</span>
-        </button>
+        <button class="today-jump-btn" @click="goToday">오늘</button>
       </div>
     </div>
 
-    <main class="content-wrapper">
-      <Transition name="fade" mode="out-in">
-        <div v-if="mealStore.isLoading" class="state-card loading">
-          <div class="pulse-loader"></div>
-          <p class="loading-text">맛있는 메뉴를 구성하고 있어요</p>
-        </div>
-
-        <div v-else-if="mealStore.isClosed" class="state-card empty">
-          <div class="icon-circle shadow-inner">
-            <span class="material-icons">coffee_maker</span>
+    <div class="meal-cards-grid">
+      <div class="card-wrapper">
+        <MealCard v-if="koreanMeal" :meal-data="koreanMeal" meal-type="A" />
+        <div v-else class="empty-state-card">
+          <div class="empty-icon-circle">
+            <span class="material-icons">restaurant</span>
           </div>
-          <h3>식당이 쉬어가는 날입니다</h3>
-          <p>다른 날짜의 건강한 식단을 확인해보세요.</p>
+          <h4>한식 준비 중</h4>
+          <p>정성 가득한 한식 식단을 준비하고 있습니다.</p>
         </div>
+      </div>
 
-        <div v-else-if="mealStore.error" class="state-card error">
-          <span class="material-icons">error_outline</span>
-          <p>정보를 불러오는 데 실패했습니다.</p>
-          <button @click="location.reload()" class="retry-btn">다시 시도</button>
+      <div class="card-wrapper">
+        <MealCard v-if="singleMeal" :meal-data="singleMeal" meal-type="B" />
+        <div v-else class="empty-state-card">
+          <div class="empty-icon-circle">
+            <span class="material-icons">auto_awesome</span>
+          </div>
+          <h4>일품 준비 중</h4>
+          <p>맛있는 특식 메뉴를 곧 공개합니다.</p>
         </div>
+      </div>
+    </div>
 
-        <div v-else class="meal-cards-grid">
-          <MealCard :meal-data="koreanMeal" meal-type="A" />
-          <MealCard :meal-data="singleMeal" meal-type="B" />
+    <div v-if="hasMealData" class="recommend-section" ref="scrollTarget">
+      <button 
+        class="action-pill-btn" 
+        :class="{ 'is-active': showDinner }"
+        @click="onClickDinnerRecommend"
+      >
+        <div class="btn-content">
+          <span class="material-icons">
+            {{ showDinner ? "keyboard_arrow_up" : "auto_fix_high" }}
+          </span>
+          <span class="btn-text">
+            {{ showDinner ? "추천 닫기" : (hasDinner ? "오늘 저녁 메뉴 보기" : "저녁 메뉴 추천 받기") }}
+          </span>
         </div>
-      </Transition>
-    </main>
+        <div class="btn-background"></div>
+      </button>
+    </div>
+
+    <DinnerCard
+      v-if="showDinner && hasMealData"
+      :key="apiDate"
+      :date="apiDate"
+      @close="showDinner = false"
+    />
   </section>
 </template>
 
 <script setup>
-import { ref, computed, watch } from "vue"
+/* 로직은 기존과 동일하므로 생략 (그대로 사용하시면 됩니다) */
+import { ref, computed, watch, nextTick } from "vue"
+import axios from "axios"
 import { useMealStore } from "@/stores/mealStore"
+import { useAuthStore } from "@/stores/auth"
+import { useRouter, useRoute } from "vue-router"
+
 import MealCard from "./MealCard.vue"
+import DinnerCard from "./DinnerCard.vue"
 
 const mealStore = useMealStore()
-const dateInputRef = ref(null)
+const authStore = useAuthStore()
+const router = useRouter()
+const route = useRoute()
 
-const formatDateToISO = (date) => date.toISOString().split('T')[0]
-const currentDate = ref(new Date())
-const dateInput = ref(formatDateToISO(currentDate.value))
+const showDinner = ref(false)
+const dateInputRef = ref(null)
+const scrollTarget = ref(null)
+const hasDinner = ref(false)
+
+const today = new Date()
+today.setHours(0, 0, 0, 0)
+
+const formatDateLocal = (date) => {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, "0")
+  const d = String(date.getDate()).padStart(2, "0")
+  return `${y}-${m}-${d}`
+}
+
+const formatDateForAPI = (date) => formatDateLocal(date).replace(/-/g, "")
+
+const getInitialDate = () => {
+  const queryDate = route.query.date
+  if (queryDate && /^\d{4}-\d{2}-\d{2}$/.test(queryDate)) {
+    return new Date(queryDate)
+  }
+  return new Date(today)
+}
+
+const currentDate = ref(getInitialDate())
+const dateInput = ref(formatDateLocal(currentDate.value))
+const apiDate = computed(() => formatDateForAPI(currentDate.value))
 
 const formattedDate = computed(() => {
   const d = currentDate.value
-  return `${d.getFullYear()}년 ${String(d.getMonth() + 1).padStart(2, '0')}월 ${String(d.getDate()).padStart(2, '0')}일`
+  return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`
 })
 
-const weekdays = ["일요일","월요일","화요일","수요일","목요일","금요일","토요일"]
+const weekdays = ["일","월","화","수","목","금","토"]
 const weekdayLabel = computed(() => weekdays[currentDate.value.getDay()])
 
-const apiDate = computed(() => formatDateToISO(currentDate.value).replace(/-/g, ""))
+const koreanMeal = computed(() => mealStore.menus.find(m => m.course_type === "A"))
+const singleMeal = computed(() => mealStore.menus.find(m => m.course_type === "B"))
+const hasMealData = computed(() => !!(koreanMeal.value || singleMeal.value))
 
-const goToday = () => { currentDate.value = new Date() }
-const openDatePicker = () => {
-  if (dateInputRef.value) {
-    'showPicker' in dateInputRef.value ? dateInputRef.value.showPicker() : dateInputRef.value.click()
+const syncDateWithURL = (newDate) => {
+  const dateStr = formatDateLocal(newDate)
+  currentDate.value = newDate
+  dateInput.value = dateStr
+  router.replace({ query: { ...route.query, date: dateStr } })
+}
+
+const openDatePicker = () => dateInputRef.value?.showPicker()
+const onDatePick = (e) => {
+  const [y, m, d] = e.target.value.split("-").map(Number)
+  syncDateWithURL(new Date(y, m - 1, d))
+}
+
+const goPrevDay = () => {
+  const d = new Date(currentDate.value)
+  d.setDate(d.getDate() - 1)
+  syncDateWithURL(d)
+}
+
+const goNextDay = () => {
+  const d = new Date(currentDate.value)
+  d.setDate(d.getDate() + 1)
+  syncDateWithURL(d)
+}
+
+const goToday = () => syncDateWithURL(new Date(today))
+
+const checkDinnerExists = async () => {
+  if (!authStore.isLoggedIn || !hasMealData.value) {
+    hasDinner.value = false
+    return
+  }
+  try {
+    await axios.post(
+      "http://localhost:8000/meal/recommend-dinner/",
+      { date: apiDate.value },
+      { headers: authStore.getAuthHeader() }
+    )
+    hasDinner.value = true
+  } catch {
+    hasDinner.value = false
   }
 }
-const onDatePick = (e) => {
-  if (!e.target.value) return
-  const [y, m, d] = e.target.value.split("-").map(Number)
-  currentDate.value = new Date(y, m - 1, d)
+
+const onClickDinnerRecommend = async () => {
+  if (!authStore.isLoggedIn) {
+    router.push("/login")
+    return
+  }
+  showDinner.value = !showDinner.value
+  if (showDinner.value) {
+    await nextTick()
+    scrollTarget.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
 }
-const goPrevDay = () => { currentDate.value = new Date(currentDate.value.setDate(currentDate.value.getDate() - 1)) }
-const goNextDay = () => { currentDate.value = new Date(currentDate.value.setDate(currentDate.value.getDate() + 1)) }
 
-watch(currentDate, (newDate) => { dateInput.value = formatDateToISO(newDate) })
-const koreanMeal = computed(() => mealStore.menus.find(m => m.course_type === "A") || null)
-const singleMeal = computed(() => mealStore.menus.find(m => m.course_type === "B") || null)
+watch(apiDate, async () => {
+  showDinner.value = false
+  await mealStore.fetchMeals(apiDate.value, "2")
+  if (hasMealData.value) {
+    await checkDinnerExists()
+  } else {
+    hasDinner.value = false
+  }
+}, { immediate: true })
 
-watch(apiDate, (val) => { mealStore.fetchMeals(val, "2") }, { immediate: true })
+watch(() => route.query.date, (newDateStr) => {
+  if (newDateStr && newDateStr !== formatDateLocal(currentDate.value)) {
+    currentDate.value = new Date(newDateStr)
+    dateInput.value = newDateStr
+  }
+})
 </script>
 
 <style scoped>
 @import url('https://fonts.googleapis.com/icon?family=Material+Icons');
 
 .meal-page {
-  padding: 60px 20px;
-  background: #fcfdfd;
+  padding: 40px 20px 80px;
+  background: #f8fafc;
   min-height: 100vh;
+  font-family: 'Pretendard', -apple-system, sans-serif;
 }
 
-.header-container {
-  max-width: 900px;
-  margin: 0 auto 60px;
-}
-
-/* ===== 날짜 선택기 바 ===== */
-.date-nav-bar {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  position: relative;
-}
+/* 상단 네비게이션 */
+.header-container { max-width: 800px; margin: 0 auto 50px; }
+.date-nav-bar { display: flex; align-items: center; gap: 10px; }
 
 .main-date-selector {
   flex: 1;
   display: flex;
   align-items: center;
   background: #ffffff;
-  padding: 16px 28px;
-  border-radius: 28px;
-  box-shadow: 0 15px 35px rgba(0,0,0,0.05);
-  border: 1px solid #f1f5f9;
+  padding: 12px 24px;
+  border-radius: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
   cursor: pointer;
-  transition: all 0.3s ease;
   position: relative;
+  border: 1px solid #f1f5f9;
 }
 
-.main-date-selector:hover {
-  transform: translateY(-3px);
-  border-color: #22c55e;
-  box-shadow: 0 20px 40px rgba(34, 197, 94, 0.1);
+.calendar-icon-box {
+  width: 40px; height: 40px;
+  background: #f1f5f9; color: #475569;
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  margin-right: 15px;
 }
 
-.calendar-accent {
-  width: 48px;
-  height: 48px;
-  background: #f0fdf4;
-  border-radius: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #22c55e;
-  margin-right: 18px;
+.display-date { margin: 0; font-size: 1.2rem; font-weight: 800; color: #1e293b; }
+.weekday-badge {
+  font-size: 0.8rem; font-weight: 600; color: #64748b;
+  background: #f1f5f9; padding: 2px 8px; border-radius: 6px; width: fit-content;
+}
+.weekday-badge.is-0 { color: #ef4444; background: #fee2e2; }
+.weekday-badge.is-6 { color: #2563eb; background: #dbeafe; }
+
+.nav-arrow-btn {
+  width: 48px; height: 48px; border-radius: 16px; border: none;
+  background: white; color: #94a3b8; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.03);
 }
 
-.display-date {
-  margin: 0;
-  font-size: 1.35rem;
-  font-weight: 900;
-  color: #0f172a;
-  letter-spacing: -0.5px;
+.today-jump-btn {
+  padding: 0 16px; height: 48px; border-radius: 16px; border: none;
+  background: #334155; color: white; font-weight: 700; cursor: pointer;
 }
 
-.display-weekday {
-  font-size: 0.85rem;
-  font-weight: 800;
-  margin-top: 2px;
-  padding: 2px 10px;
-  border-radius: 8px;
-  width: fit-content;
-  background: #f1f5f9;
-  color: #64748b;
-}
-
-.type-0 { color: #ef4444; background: #fef2f2; } /* 일요일 */
-.type-6 { color: #3b82f6; background: #eff6ff; } /* 토요일 */
-
-.hidden-picker {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  cursor: pointer;
-}
-
-/* ===== 버튼 그룹 ===== */
-.glass-icon-btn {
-  width: 56px;
-  height: 56px;
-  border-radius: 20px;
-  border: none;
-  background: #ffffff;
-  color: #94a3b8;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 8px 15px rgba(0,0,0,0.03);
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.glass-icon-btn:hover {
-  background: #0f172a;
-  color: #ffffff;
-}
-
-.today-float-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 24px;
-  height: 56px;
-  border-radius: 20px;
-  border: none;
-  background: #0f172a;
-  color: #fff;
-  font-weight: 800;
-  cursor: pointer;
-  transition: all 0.3s;
-  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.1);
-}
-
-.today-float-btn:hover {
-  background: #22c55e;
-  transform: translateY(-2px);
-  box-shadow: 0 12px 24px rgba(34, 197, 94, 0.2);
-}
-
-/* ===== 상태 카드 (로딩/비어있음) ===== */
-.state-card {
-  background: #ffffff;
-  padding: 80px 40px;
-  border-radius: 40px;
-  text-align: center;
-  box-shadow: 0 20px 50px rgba(0,0,0,0.04);
-  max-width: 600px;
-  margin: 0 auto;
-}
-
-.loading-text {
-  font-weight: 700;
-  color: #64748b;
-  margin-top: 10px;
-}
-
-.pulse-loader {
-  width: 50px;
-  height: 50px;
-  background: #22c55e;
-  border-radius: 50%;
-  margin: 0 auto 24px;
-  animation: pulse 1.5s infinite ease-in-out;
-}
-
-@keyframes pulse {
-  0% { transform: scale(0.8); opacity: 0.4; box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
-  50% { transform: scale(1.1); opacity: 1; box-shadow: 0 0 0 20px rgba(34, 197, 94, 0); }
-  100% { transform: scale(0.8); opacity: 0.4; }
-}
-
-.icon-circle {
-  width: 80px;
-  height: 80px;
-  background: #f8fafc;
-  color: #cbd5e1;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 20px;
-}
-
-.icon-circle .material-icons { font-size: 40px; }
-
-/* ===== 그리드 배율 ===== */
+/* 식단 카드 그리드 */
 .meal-cards-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
-  gap: 40px;
-  max-width: 1200px;
-  margin: 0 auto;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 30px; max-width: 1000px; margin: 0 auto;
 }
 
-@media (max-width: 850px) {
-  .meal-cards-grid { grid-template-columns: 1fr; max-width: 450px; }
-  .today-float-btn span:not(.material-icons) { display: none; }
-  .today-float-btn { padding: 0 16px; width: 56px; justify-content: center; }
+.card-wrapper { position: relative; padding-top: 15px; }
+
+/* 한식/일품 강조 태그 */
+
+.empty-state-card {
+  height: 420px; background: white; border-radius: 28px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  border: 1px solid #edf2f7; text-align: center;
+}
+.empty-icon-circle {
+  width: 64px; height: 64px; background: #f8fafc; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; margin-bottom: 16px;
+}
+.empty-icon-circle .material-icons { color: #cbd5e1; font-size: 28px; }
+.empty-state-card h4 { margin: 0; color: #475569; font-weight: 700; }
+.empty-state-card p { font-size: 0.85rem; color: #94a3b8; margin-top: 6px; }
+
+/* 저녁 추천 버튼 */
+.recommend-section { display: flex; justify-content: center; margin-top: 50px; }
+.action-pill-btn {
+  position: relative; padding: 16px 32px; border-radius: 50px;
+  border: none; background: #1e293b; color: white;
+  cursor: pointer; overflow: hidden; transition: all 0.3s ease;
+}
+.action-pill-btn:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.15); }
+.btn-content { display: flex; align-items: center; gap: 8px; position: relative; z-index: 2; }
+.btn-text { font-weight: 700; font-size: 1rem; }
+.action-pill-btn.is-active { background: #64748b; }
+
+.hidden-picker { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
+@media (max-width: 600px) {
+  .display-date { font-size: 1rem; }
+  .meal-cards-grid { grid-template-columns: 1fr; }
 }
 </style>

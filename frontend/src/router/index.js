@@ -17,6 +17,11 @@ const routes = [
   { path: "/", name: "Main", component: MainPage },
   { path: "/login", name: "Login", component: LoginPage },
   { path: "/signup", name: "Signup", component: SignUpPage },
+  // router/index.js
+  {
+    path: "/calendar",
+    component: () => import("@/pages/calendar/CalendarPage.vue"),
+  },
 
   {
     path: "/profile-setup",
