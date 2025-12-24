@@ -82,14 +82,16 @@
 import { computed, watch, onMounted } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { useCommunityStore } from "@/stores/community"
+import { useAuthStore } from "@/stores/auth" // ✅ Auth 스토어 추가
 import BaseNavbar from "@/components/common/BaseNavbar.vue"
 import CommunityPostCard from "@/components/community/CommunityPostCard.vue"
 
 const route = useRoute()
 const router = useRouter()
 const store = useCommunityStore()
+const authStore = useAuthStore() // ✅ Auth 스토어 사용
 
-// 1. URL 파라미터에서 현재 카테고리 추출 (예: restaurant, free)
+// 1. URL 파라미터에서 현재 카테고리 추출
 const currentCategory = computed(() => (route.params.category || 'RESTAURANT').toUpperCase())
 
 // 2. 핵심 로직: URL 카테고리가 바뀔 때마다 서버에 해당 데이터 요청
@@ -100,19 +102,29 @@ watch(
       store.fetchPostsByCategory(newCategory)
     }
   },
-  { immediate: true } // 페이지 진입 시 즉시 실행
+  { immediate: true }
 )
 
-// 탭 변경 시 URL 이동 (라우터 이동)
+// 탭 변경 시 URL 이동
 const handleTabChange = (target) => {
   router.push(`/community/${target.toLowerCase()}`)
 }
 
-// 상세 페이지 이동 (아까 라우터에서 설정한 detail 경로로 수정)
+// 상세 페이지 이동
 const goDetail = (id) => router.push(`/community/detail/${id}`)
 
-// 글쓰기 페이지 이동
+// ✅ 글쓰기 페이지 이동 (로그인 체크 로직 추가됨)
 const goCreate = () => {
+  // 1. 로그인 상태 확인 (토큰 유무 체크)
+  if (!authStore.token) {
+    // 2. 로그인 안 되어 있으면 알림창 띄우기
+    if (confirm("새 글을 작성하려면 로그인이 필요합니다.\n로그인 페이지로 이동하시겠습니까? 🔒")) {
+      router.push("/login")
+    }
+    return // 함수 종료 (글쓰기 페이지로 이동 X)
+  }
+
+  // 3. 로그인 되어 있으면 정상 이동
   router.push({
     path: "/community/write",
     query: { category: currentCategory.value },
@@ -227,7 +239,7 @@ const goCreate = () => {
   padding: 8px;
   border-radius: 20px;
   width: fit-content;
-  flex-wrap: nowrap;          /* 🔥 줄바꿈 제거 */
+  flex-wrap: nowrap;
   white-space: nowrap;
 }
 

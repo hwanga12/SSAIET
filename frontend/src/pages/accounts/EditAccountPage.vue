@@ -16,7 +16,7 @@
 
         <header class="account-header">
           <div class="header-icon">
-            <span class="material-icons">vps</span>
+            <span class="material-icons">manage_accounts</span>
           </div>
           <h1 class="account-title">계정 <span class="highlight">정보</span> 수정</h1>
           <p class="account-subtitle">보안을 위해 개인 정보를 최신 상태로 유지하세요.</p>
@@ -30,14 +30,6 @@
               <input v-model="username" disabled class="custom-input disabled" />
             </div>
             <p class="input-hint">아이디는 변경할 수 없습니다.</p>
-          </div>
-
-          <div class="field">
-            <label>이메일 주소</label>
-            <div class="input-wrapper">
-              <span class="material-icons input-icon">alternate_email</span>
-              <input v-model="email" type="email" class="custom-input" placeholder="example@ssafy.com" />
-            </div>
           </div>
 
           <div class="field">
@@ -75,7 +67,6 @@ const router = useRouter()
 const auth = useAuthStore()
 
 const username = ref(auth.user.username)
-const email = ref(auth.user.email)
 const password = ref("")
 
 const goBack = () => {
@@ -86,7 +77,6 @@ const save = async () => {
   try {
     await auth.updateAccount({
       username: username.value,
-      email: email.value,
       password: password.value || undefined,
     })
     alert("계정 정보가 성공적으로 수정되었습니다. 🌱")
@@ -187,6 +177,11 @@ const save = async () => {
   align-items: center;
   justify-content: center;
   margin: 0 auto 16px;
+}
+
+/* 아이콘 크기 살짝 조정 */
+.header-icon .material-icons {
+  font-size: 32px;
 }
 
 .account-title {
@@ -298,8 +293,4 @@ label {
   transform: translateY(0);
 }
 
-@media (max-width: 480px) {
-  .account-card { padding: 40px 24px; }
-  .account-title { font-size: 1.5rem; }
-}
 </style>

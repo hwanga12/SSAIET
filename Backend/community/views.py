@@ -1,5 +1,5 @@
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_framework import status
 from django.shortcuts import get_object_or_404
@@ -12,7 +12,7 @@ from .serializers import CommunityPostSerializer, PostCommentSerializer
 # 📂 1. 카테고리별 게시글 목록 조회 (새로 추가)
 # ==================================================
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticatedOrReadOnly])
 def community_list_by_category(request, category):
     """
     URL 파라미터로 받은 category를 대문자로 변환하여 해당 글만 필터링합니다.
@@ -30,7 +30,7 @@ def community_list_by_category(request, category):
 # 📌 2. 게시글 목록(전체) + 생성
 # ==================================================
 @api_view(["GET", "POST"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticatedOrReadOnly]) # ✅ 조회는 누구나, 작성은 로그인 필요
 def post_list_create(request):
     if request.method == "GET":
         posts = CommunityPost.objects.all().order_by("-created_at")
@@ -38,12 +38,13 @@ def post_list_create(request):
         return Response(serializer.data)
 
     if request.method == "POST":
+        # POST 요청은 IsAuthenticatedOrReadOnly 덕분에 로그인 안 하면 여기까지 못 옴
         serializer = CommunityPostSerializer(
             data=request.data,
             context={"request": request}
         )
         if serializer.is_valid():
-            # author는 현재 로그인된 유저로 자동 저장 (Serializer logic에 따라)
+            # author는 현재 로그인된 유저로 자동 저장
             serializer.save(author=request.user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -53,7 +54,7 @@ def post_list_create(request):
 # 📌 3. 게시글 상세 / 수정 / 삭제
 # ==================================================
 @api_view(["GET", "PUT", "DELETE"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticatedOrReadOnly]) # ✅ 조회는 누구나 가능
 def post_detail(request, post_id):
     post = get_object_or_404(CommunityPost, id=post_id)
 
@@ -61,6 +62,7 @@ def post_detail(request, post_id):
         serializer = CommunityPostSerializer(post, context={"request": request})
         return Response(serializer.data)
 
+    # PUT, DELETE는 권한이 있어야 실행됨 (로그인 여부 + 작성자 본인 확인)
     if request.method == "PUT":
         if post.author != request.user:
             return Response({"detail": "권한 없음"}, status=status.HTTP_403_FORBIDDEN)
@@ -107,7 +109,7 @@ def toggle_like(request, post_id):
 # 💬 5. 댓글 목록 + 생성
 # ==================================================
 @api_view(["GET", "POST"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticatedOrReadOnly]) # ✅ 댓글 보기는 누구나 가능
 def comment_list_create(request, post_id):
     post = get_object_or_404(CommunityPost, id=post_id)
 

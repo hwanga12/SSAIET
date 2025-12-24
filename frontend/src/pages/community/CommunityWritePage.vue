@@ -53,42 +53,44 @@
               <input v-model="restaurant.recommended_menu" placeholder="추천 메뉴" class="custom-input" />
               <div class="select-wrapper">
                 <select v-model="restaurant.health_tag" class="custom-select">
-                  <option value="BALANCED">영양만점 식단</option>
-                  <option value="PROTEIN">고단백 식단</option>
-                  <option value="LOW_CAL">저칼로리 식단</option>
+                  <option value="BALANCED">🥗 균형식</option>
+                  <option value="HIGH_PROTEIN">🥩 고단백</option>
+                  <option value="LOW_FAT">🥑 저지방</option>
+                  <option value="DIET">📉 다이어트</option>
+                  <option value="OUT">🍜 외식 (치팅)</option>
                 </select>
               </div>
             </div>
           </div>
 
           <div v-else-if="category === 'REVIEW'" class="extra-info-card review">
-            <h4 class="extra-title"><span class="material-icons">auto_graph</span> 건강 변화 상세</h4>
+            <h4 class="extra-title"><span class="material-icons">monitor_weight</span> 체중 변화 기록</h4>
             <div class="extra-grid">
-              <div class="select-wrapper">
-                <select v-model="review.period" class="custom-select">
-                  <option value="1W">1주일 진행</option>
-                  <option value="2W">2주일 진행</option>
-                  <option value="1M">1개월 진행</option>
-                  <option value="3M">3개월 이상</option>
-                </select>
+              <div class="field-group-inner">
+                <label class="sub-label">진행 기간</label>
+                <div class="select-wrapper">
+                  <select v-model="review.period" class="custom-select">
+                    <option value="1W">1주일 진행</option>
+                    <option value="2W">2주일 진행</option>
+                    <option value="1M">1개월 진행</option>
+                    </select>
+                </div>
               </div>
-              <div class="select-wrapper">
-                <select v-model="review.change_type" class="custom-select">
-                  <option value="WEIGHT">체중 변화</option>
-                  <option value="DIET">식습관 개선</option>
-                  <option value="EXERCISE">체력 증진</option>
-                </select>
-              </div>
-              <div class="weight-input-group">
-                <input
-                  type="number"
-                  v-model="review.weight_diff"
-                  placeholder="체중 변화 (kg)"
-                  class="custom-input"
-                />
-                <span class="unit-text">kg</span>
+              
+              <div class="field-group-inner">
+                <label class="sub-label">체중 변화량</label>
+                <div class="weight-input-group">
+                  <input
+                    type="number"
+                    v-model="review.weight_diff"
+                    placeholder="예: -2.5"
+                    class="custom-input no-spinner"
+                  />
+                  <span class="unit-text">kg</span>
+                </div>
               </div>
             </div>
+            <p class="input-hint">* 변화량만 입력해주세요 (예: 감량시 -2, 증량시 2)</p>
           </div>
         </Transition>
 
@@ -146,14 +148,21 @@ const submit = async () => {
       content: content.value,
     }
     
-    if (category.value === "RESTAURANT") payload.restaurant_info = restaurant.value
-    if (category.value === "REVIEW") payload.review_info = review.value
+    if (category.value === "RESTAURANT") {
+      payload.restaurant_info = restaurant.value
+    }
+
+    if (category.value === "REVIEW") {
+      if (!review.value.weight_diff) {
+        alert("체중 변화량을 입력해주세요.")
+        return
+      }
+      payload.review_info = review.value
+    }
 
     console.log("📦 2. 전송 데이터 확인:", payload)
     
-    // ✅ 에러 포인트 체크: store에 addPost가 있는지 확인
     if (typeof store.addPost !== 'function') {
-
       alert("시스템 오류: 등록 함수를 찾을 수 없습니다.")
       return
     }
@@ -163,7 +172,6 @@ const submit = async () => {
     router.push(`/community/${category.value.toLowerCase()}`)
     
   } catch (err) {
-    // 만약 백엔드에서 에러 메시지를 보냈다면 출력
     const errorMsg = err.response?.data?.detail || "글 작성 중 오류가 발생했습니다."
     alert(errorMsg)
   }
@@ -177,7 +185,6 @@ const submit = async () => {
   min-height: 100vh;
   background-color: #fcfdfd;
   position: relative;
-  overflow-x: auto; /* 🔥 가로 스크롤 허용 */
 }
 
 /* ================= BACKGROUND ================= */
@@ -216,14 +223,9 @@ const submit = async () => {
   position: relative;
   z-index: 1;
   max-width: 750px;
-  min-width: 750px; /* 🔥 PC 고정 */
+  min-width: 750px;
   margin: 0 auto;
   padding: 120px 20px 100px;
-}
-
-/* 줄바꿈 전면 차단 */
-.write-layout * {
-  white-space: nowrap;
 }
 
 /* ================= HEADER ================= */
@@ -286,6 +288,7 @@ const submit = async () => {
   background: #ffffff;
   font-size: 1rem;
   transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-sizing: border-box;
 }
 
 .custom-textarea {
@@ -293,7 +296,6 @@ const submit = async () => {
   padding: 16px;
   resize: none;
   line-height: 1.6;
-  white-space: normal; /* ✅ textarea만 줄바꿈 허용 */
 }
 
 .custom-input:focus,
@@ -302,6 +304,16 @@ const submit = async () => {
   outline: none;
   border-color: #22c55e;
   box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.1);
+}
+
+/* ✅ 화살표(Spinner) 제거 스타일 */
+.custom-input.no-spinner::-webkit-outer-spin-button,
+.custom-input.no-spinner::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.custom-input.no-spinner {
+  -moz-appearance: textfield;
 }
 
 /* ================= EXTRA INFO ================= */
@@ -332,6 +344,19 @@ const submit = async () => {
   gap: 16px;
 }
 
+.field-group-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sub-label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #64748b;
+  margin-left: 2px;
+}
+
 .weight-input-group {
   position: relative;
   display: flex;
@@ -343,6 +368,13 @@ const submit = async () => {
   right: 16px;
   font-weight: 700;
   color: #94a3b8;
+}
+
+.input-hint {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  margin-top: 12px;
+  text-align: right;
 }
 
 /* ================= ACTIONS ================= */
@@ -398,5 +430,4 @@ button {
   opacity: 0;
   transform: translateY(-10px);
 }
-
 </style>

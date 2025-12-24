@@ -63,7 +63,7 @@ const routes = [
     path: "/community/:category(restaurant|review|qna|free)",
     name: "community",
     component: CommunityListPage,
-    meta: { requiresAuth: true },
+    // meta: { requiresAuth: true },
   },
 
   // 3. 게시글 작성 (상세 페이지보다 위에 있어야 우선순위가 밀리지 않음)
@@ -71,7 +71,7 @@ const routes = [
     path: "/community/write",
     name: "community-write",
     component: CommunityWritePage,
-    meta: { requiresAuth: true },
+    // meta: { requiresAuth: true },
   },
 
   // 4. 게시글 상세
@@ -79,7 +79,7 @@ const routes = [
     path: "/community/detail/:id", // 주소가 겹치지 않게 detail을 넣어주는 것이 안전함
     name: "community-detail",
     component: CommunityDetailPage,
-    meta: { requiresAuth: true },
+    // meta: { requiresAuth: true },
   },
 
   {

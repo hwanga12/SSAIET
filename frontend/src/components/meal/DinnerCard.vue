@@ -120,6 +120,8 @@ const isEaten = ref(null)
 
 /* 기존 추천 조회 */
 const fetchExistingDinner = async () => {
+  console.log("📌 fetchExistingDinner 실행", { date: props.date })
+
   try {
     const res = await axios.post(
       "http://localhost:8000/meal/recommend-dinner/",
@@ -127,19 +129,36 @@ const fetchExistingDinner = async () => {
       { headers: authStore.getAuthHeader() }
     )
 
+    console.log("✅ 기존 추천 응답:", res)
+    console.log("📦 res.data:", res.data)
+
     if (res.data?.cached) {
+      console.log("🟢 캐시된 저녁 추천 사용")
+
       dinnerId.value = res.data.dinner_id
       dinnerMenu.value = res.data.ai_menu
       reason.value = res.data.reason
       isEaten.value = res.data.is_eaten
+
       step.value = "result"
       return
+    } else {
+      console.log("🟡 캐시 없음 → 점심 선택 단계")
     }
+
   } catch (err) {
-    console.error("추천 데이터 로드 실패")
+    console.error("❌ 기존 추천 로드 실패")
+    console.error("에러 객체:", err)
+
+    if (err.response) {
+      console.error("📛 응답 상태:", err.response.status)
+      console.error("📛 응답 데이터:", err.response.data)
+    }
   }
+
   step.value = "select"
 }
+
 
 /* 점심 선택 */
 const selectLunch = async (mealId) => {

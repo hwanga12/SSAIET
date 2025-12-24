@@ -91,7 +91,6 @@
 </template>
 
 <script setup>
-/* 로직은 그대로 유지 */
 import { ref, computed, watch, nextTick } from "vue"
 import axios from "axios"
 import { useMealStore } from "@/stores/mealStore"
@@ -191,11 +190,15 @@ const checkDinnerExists = async () => {
   }
 }
 
+// ✅ [수정됨] 로그인 체크 및 알림 추가
 const onClickDinnerRecommend = async () => {
   if (!authStore.isLoggedIn) {
-    router.push("/login")
+    if (confirm("저녁 메뉴 추천은 로그인이 필요한 서비스입니다.\n로그인 페이지로 이동하시겠습니까? 🔒")) {
+      router.push("/login")
+    }
     return
   }
+  
   showDinner.value = !showDinner.value
   if (showDinner.value) {
     await nextTick()

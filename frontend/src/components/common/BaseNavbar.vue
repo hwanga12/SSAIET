@@ -5,15 +5,17 @@
         <img src="@/assets/1.png" alt="SSAIET Logo" class="logo-img" />
       </div>
 
-      <nav class="main-nav" v-if="authStore.isLoggedIn">
+      <nav class="main-nav">
         <button class="nav-link" @click="scrollToMeal">
           <span class="material-icons">restaurant</span>
           <span class="nav-text">오늘 식단</span>
         </button>
-        <button class="nav-link" @click="router.push('/calendar')">
+        
+        <button class="nav-link" @click="handleProtectedMove('/calendar')">
           <span class="material-icons">calendar_month</span>
           <span class="nav-text">영양 캘린더</span>
         </button>
+
         <button class="nav-link" @click="router.push('/community')">
           <span class="material-icons">forum</span>
           <span class="nav-text">커뮤니티</span>
@@ -101,7 +103,6 @@ const closeMenu = () => {
   menuOpen.value = false
 }
 
-// 메뉴 바깥 클릭 시 닫기
 onMounted(() => window.addEventListener("click", closeMenu))
 onUnmounted(() => window.removeEventListener("click", closeMenu))
 
@@ -111,6 +112,17 @@ const scrollToMeal = () => {
   } else {
     router.push({ path: "/", hash: "#today-meal-section" })
   }
+}
+
+// 🔒 로그인 필요한 페이지 이동 함수 (현재 캘린더에만 적용)
+const handleProtectedMove = (path) => {
+  if (!authStore.isLoggedIn) {
+    if (confirm("로그인 후 이용 가능한 서비스입니다.\n로그인 페이지로 이동하시겠습니까? 🔒")) {
+      router.push("/login")
+    }
+    return
+  }
+  router.push(path)
 }
 
 const goHome = () => router.push("/")
@@ -124,7 +136,6 @@ const logout = () => {
   router.replace("/")
 }
 
-// ⭐ 계정 탈퇴 처리 로직
 const handleWithdraw = async () => {
   const isConfirmed = window.confirm(
     "정말로 SSAIET을 떠나시겠어요? 😢\n탈퇴 시 모든 건강 데이터와 활동 기록이 삭제되며 복구할 수 없습니다."
