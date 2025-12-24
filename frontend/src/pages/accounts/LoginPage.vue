@@ -71,10 +71,17 @@
               </div>
             </div>
 
-            <button class="login-btn" @click="handleLogin">
-              <span class="btn-text">로그인</span>
-              <span class="material-icons">login</span>
-            </button>
+            <div class="action-group">
+              <button class="login-btn" @click="handleLogin">
+                <span class="btn-text">로그인</span>
+                <span class="material-icons">login</span>
+              </button>
+              
+              <button class="home-btn" @click="goHome">
+                <span class="material-icons">home</span>
+                <span class="btn-text">메인페이지로 돌아가기</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -124,13 +131,18 @@ const handleLogin = async () => {
       password: password.value,
     })
 
-    authStore.accessToken = res.data.access
-    localStorage.setItem("accessToken", res.data.access)
-    authStore.isLoggedIn = true
+    // ✅ 여기가 핵심 수정 부분입니다!
+    // 직접 값을 대입하지 말고, 스토어의 액션(함수)을 호출해야 반응성이 작동합니다.
+    authStore.loginSuccess(
+      res.data.access,    // 토큰
+      res.data.name,      // 이름
+      res.data.username   // 아이디
+    )
 
+    // (옵션) 만약 백엔드에서 주는 추가 정보(키/몸무게 등)를 user 객체에 더 넣고 싶다면
+    // loginSuccess 호출 직후에 user 값을 덮어쓰세요.
     authStore.user = {
-      username: res.data.username,
-      name: res.data.name,
+      ...authStore.user, // 기존 name, username 유지
       email: res.data.email,
       height: res.data.height,
       current_weight: res.data.current_weight,
@@ -141,10 +153,13 @@ const handleLogin = async () => {
       gender: res.data.gender,
       allergies: res.data.allergies,
     }
+    // 업데이트된 user 정보를 다시 로컬스토리지에 저장
     localStorage.setItem("user", JSON.stringify(authStore.user))
 
+    // 메인으로 이동
     router.push("/")
   } catch (err) {
+    console.error(err)
     loginFailed.value = true 
   }
 }
@@ -154,6 +169,7 @@ const goHome = () => router.push("/")
 </script>
 
 <style scoped>
+/* 기존 스타일 그대로 유지 */
 @import url('https://fonts.googleapis.com/icon?family=Material+Icons');
 
 .login-page {
@@ -167,22 +183,11 @@ const goHome = () => router.push("/")
   background: #fcfdfd;
 }
 
-/* 배경 장식 */
-.bg-decoration {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-}
-.blob {
-  position: absolute;
-  filter: blur(100px);
-  border-radius: 50%;
-  opacity: 0.2;
-}
+.bg-decoration { position: absolute; inset: 0; z-index: 0; }
+.blob { position: absolute; filter: blur(100px); border-radius: 50%; opacity: 0.2; }
 .blob-green { width: 600px; height: 600px; background: #22c55e; top: -100px; right: -100px; }
 .blob-light { width: 500px; height: 500px; background: #e2e8f0; bottom: -100px; left: -100px; }
 
-/* 카드 디자인 */
 .login-container { position: relative; z-index: 1; width: 100%; max-width: 1050px; padding: 0 20px; }
 .login-card { 
   display: flex; 
@@ -194,7 +199,6 @@ const goHome = () => router.push("/")
   overflow: hidden; 
 }
 
-/* 왼쪽 비주얼 (화이트 테마) */
 .visual-side { 
   flex: 1; 
   background: #f8fafc; 
@@ -210,7 +214,6 @@ const goHome = () => router.push("/")
 .highlight { color: #22c55e; }
 .visual-text { font-size: 1.2rem; color: #64748b; line-height: 1.6; }
 
-/* 오른쪽 폼 */
 .form-side { flex: 1.2; background: white; display: flex; align-items: center; justify-content: center; padding: 40px; }
 .form-inner { width: 100%; max-width: 360px; }
 .form-header { margin-bottom: 30px; }
@@ -218,8 +221,7 @@ const goHome = () => router.push("/")
 .form-subtitle { font-size: 1rem; color: #64748b; }
 .signup-link { color: #22c55e; font-weight: 800; cursor: pointer; margin-left: 5px; }
 
-/* 입력 필드 */
-.input-group { display: flex; flex-direction: column; gap: 18px; margin-bottom: 30px; }
+.input-group { display: flex; flex-direction: column; gap: 18px; margin-bottom: 25px; }
 .input-field { display: flex; flex-direction: column; gap: 6px; }
 .input-field label { font-size: 14px; font-weight: 700; color: #1e293b; margin-left: 4px; }
 
@@ -233,12 +235,16 @@ const goHome = () => router.push("/")
 }
 .custom-input:focus { outline: none; border-color: #22c55e; box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.1); }
 
-/* 에러 스타일 */
 .input-error { border-color: #ef4444 !important; background: #fffcfc; }
 .error-msg { font-size: 12px; color: #ef4444; font-weight: 600; margin-left: 4px; margin-top: 2px; }
 .mt-1 { margin-top: 4px; }
 
-/* 버튼 (딥 블랙 & 그린 호버) */
+.action-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .login-btn {
   width: 100%;
   height: 54px;
@@ -256,6 +262,28 @@ const goHome = () => router.push("/")
   transition: 0.2s;
 }
 .login-btn:hover { background: #22c55e; transform: translateY(-2px); box-shadow: 0 10px 20px rgba(34, 197, 94, 0.2); }
+
+.home-btn {
+  width: 100%;
+  height: 50px;
+  background: white;
+  color: #64748b;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.home-btn:hover {
+  background: #f8fafc;
+  color: #0f172a;
+  border-color: #cbd5e1;
+}
 
 .material-icons { font-size: 18px; }
 </style>

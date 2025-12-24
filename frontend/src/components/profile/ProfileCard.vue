@@ -39,7 +39,7 @@
         </div>
 
         <div class="allergy-footer">
-          <span class="label">알러지 정보</span>
+          <span class="label">알레르기 정보</span>
           <p class="text">{{ user.allergies || "등록된 정보 없음" }}</p>
         </div>
 

@@ -32,6 +32,7 @@
             </div>
           </div>
           <div v-else class="edit-post-header">
+            <label class="edit-label">제목</label>
             <input 
               v-model="editPostData.title" 
               class="edit-title-input" 
@@ -42,16 +43,131 @@
 
         <section class="post-body">
           <p v-if="!isEditingPost" class="content-text">{{ post.content }}</p>
-          <textarea 
-            v-else 
-            v-model="editPostData.content" 
-            class="edit-content-textarea" 
-            rows="10"
-          ></textarea>
+          <div v-else class="edit-content-wrapper">
+            <label class="edit-label">내용</label>
+            <textarea 
+              v-model="editPostData.content" 
+              class="edit-content-textarea" 
+              rows="10"
+            ></textarea>
+          </div>
         </section>
 
-        <section v-if="hasExtraInfo && !isEditingPost" class="extra-info-section">
-          </section>
+        <section class="extra-info-section">
+          
+          <template v-if="!isEditingPost">
+            <div v-if="post.category === 'RESTAURANT' && post.restaurant_info" class="extra-card restaurant">
+              <div class="extra-header">
+                <span class="material-icons tag">restaurant_menu</span>
+                <h3>식당 상세 정보</h3>
+              </div>
+              <div class="extra-grid">
+                <div class="info-item">
+                  <strong>식당 이름</strong>
+                  <span>{{ post.restaurant_info.restaurant_name }}</span>
+                </div>
+                <div class="info-item">
+                  <strong>위치</strong>
+                  <span>{{ post.restaurant_info.location }}</span>
+                </div>
+                <div class="info-item">
+                  <strong>추천 메뉴</strong>
+                  <span>{{ post.restaurant_info.recommended_menu }}</span>
+                </div>
+                <div class="info-item">
+                  <strong>건강 태그</strong>
+                  <span class="tag">{{ getHealthLabel(post.restaurant_info.health_tag) }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div v-if="post.category === 'REVIEW' && post.review_info" class="extra-card review-modern">
+              <div class="review-badges">
+                <span class="badge period">
+                  <span class="material-icons">calendar_today</span>
+                  {{ getPeriodLabel(post.review_info.period) }} 동안
+                </span>
+                <span class="badge type">체중 변화</span>
+              </div>
+
+              <div class="weight-display">
+                <div class="weight-icon-circle" :class="post.review_info.weight_diff < 0 ? 'loss' : 'gain'">
+                  <span class="material-icons">
+                    {{ post.review_info.weight_diff < 0 ? 'trending_down' : (post.review_info.weight_diff > 0 ? 'trending_up' : 'remove') }}
+                  </span>
+                </div>
+                <div class="weight-text-group">
+                  <span class="label-text">총 변화량</span>
+                  <div class="value-text" :class="post.review_info.weight_diff < 0 ? 'loss-text' : 'gain-text'">
+                    {{ post.review_info.weight_diff > 0 ? '+' : '' }}{{ post.review_info.weight_diff }}
+                    <span class="unit">kg</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </template>
+
+          <template v-else>
+            <div v-if="post.category === 'RESTAURANT'" class="extra-card restaurant edit-mode">
+              <div class="extra-header">
+                <span class="material-icons tag">edit_note</span>
+                <h3>식당 정보 수정</h3>
+              </div>
+              <div class="edit-grid">
+                <div class="input-group">
+                  <label>식당 이름</label>
+                  <input v-model="editPostData.restaurant.restaurant_name" class="custom-input small" placeholder="식당 이름" />
+                </div>
+                <div class="input-group">
+                  <label>위치</label>
+                  <input v-model="editPostData.restaurant.location" class="custom-input small" placeholder="위치 (예: 역삼역)" />
+                </div>
+                <div class="input-group">
+                  <label>추천 메뉴</label>
+                  <input v-model="editPostData.restaurant.recommended_menu" class="custom-input small" placeholder="추천 메뉴" />
+                </div>
+                <div class="input-group">
+                  <label>건강 태그</label>
+                  <select v-model="editPostData.restaurant.health_tag" class="custom-select small">
+                    <option value="BALANCED">🥗 균형식</option>
+                    <option value="HIGH_PROTEIN">🥩 고단백</option>
+                    <option value="LOW_FAT">🥑 저지방</option>
+                    <option value="DIET">📉 다이어트</option>
+                    <option value="OUT">🍜 외식 (치팅)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div v-if="post.category === 'REVIEW'" class="extra-card review edit-mode">
+              <div class="extra-header">
+                <span class="material-icons tag">monitor_weight</span>
+                <h3>체중 변화 정보 수정</h3>
+              </div>
+              <div class="edit-grid">
+                <div class="input-group">
+                  <label>진행 기간</label>
+                  <select v-model="editPostData.review.period" class="custom-select small">
+                    <option value="1W">1주일 진행</option>
+                    <option value="2W">2주일 진행</option>
+                    <option value="1M">1개월 진행</option>
+                  </select>
+                </div>
+                <div class="input-group">
+                  <label>체중 변화량 (kg)</label>
+                  <input 
+                    type="number" 
+                    v-model="editPostData.review.weight_diff" 
+                    class="custom-input small no-spinner" 
+                    placeholder="예: -2.5" 
+                  />
+                </div>
+              </div>
+              <p class="input-hint">* 변화량만 입력해주세요 (예: 감량시 -2, 증량시 2)</p>
+            </div>
+          </template>
+
+        </section>
 
         <footer class="post-footer">
           <template v-if="!isEditingPost">
@@ -74,7 +190,7 @@
 
           <template v-else>
             <div class="edit-actions-group">
-              <button class="save-btn" @click="submitEditPost">저장하기</button>
+              <button class="save-btn" @click="submitEditPost">수정 완료</button>
               <button class="cancel-btn" @click="isEditingPost = false">취소</button>
             </div>
           </template>
@@ -88,7 +204,7 @@
             </div>
           </div>
 
-          <div class="comment-input-card">
+          <div v-if="!isEditingPost" class="comment-input-card">
             <textarea 
               v-model="newComment" 
               placeholder="따뜻한 댓글로 SSAFY 동료를 응원해주세요!"
@@ -102,6 +218,9 @@
                 <span class="material-icons">send</span>
               </button>
             </div>
+          </div>
+          <div v-else class="empty-placeholder">
+            ⚠️ 게시글 수정 중에는 댓글을 작성할 수 없습니다.
           </div>
 
           <TransitionGroup name="comment-list" tag="div" class="comment-list-container">
@@ -140,26 +259,36 @@
 </template>
 
 <script setup>
-// 1. 모든 도구들을 먼저 가져옵니다 (Import)
 import { ref, reactive, computed, onMounted } from "vue" 
 import { useRoute, useRouter } from "vue-router"
 import { useCommunityStore } from "@/stores/community"
 import BaseNavbar from "@/components/common/BaseNavbar.vue"
 
-// 2. 외부 도구 설정
 const route = useRoute()
 const router = useRouter()
 const store = useCommunityStore()
 const postId = Number(route.params.id)
 
-// 3. 상태 변수 선언 (데이터 보관함)
 const isEditingPost = ref(false)
-const editPostData = reactive({ title: "", content: "" })
+const editPostData = reactive({ 
+  title: "", 
+  content: "",
+  restaurant: {
+    restaurant_name: "",
+    location: "",
+    recommended_menu: "",
+    health_tag: "BALANCED"
+  },
+  review: {
+    period: "1W",
+    weight_diff: null,
+    change_type: "WEIGHT"
+  }
+})
 const editingCommentId = ref(null)
 const editCommentContent = ref("")
 const newComment = ref("")
 
-// 4. 데이터 계산 로직 (Computed)
 const post = computed(() => store.posts.find(p => p.id === postId))
 const comments = computed(() => store.comments || [])
 const isLiked = computed(() => post.value?.is_liked || false)
@@ -168,13 +297,38 @@ const hasExtraInfo = computed(() => {
   return ['RESTAURANT', 'REVIEW'].includes(post.value.category)
 })
 
+const HEALTH_TAG_MAP = {
+  "BALANCED": "🥗 균형식",
+  "HIGH_PROTEIN": "🥩 고단백",
+  "LOW_FAT": "🥑 저지방",
+  "DIET": "📉 다이어트",
+  "OUT": "🍜 외식 (치팅)"
+}
+const getHealthLabel = (code) => HEALTH_TAG_MAP[code] || code
+
+const getPeriodLabel = (code) => {
+  const map = { '1W': '1주일', '2W': '2주일', '1M': '1개월' }
+  return map[code] || code
+}
+
 const startEditPost = () => {
   if (!post.value) return
   editPostData.title = post.value.title
   editPostData.content = post.value.content
+  
+  if (post.value.category === 'RESTAURANT' && post.value.restaurant_info) {
+    editPostData.restaurant = { ...post.value.restaurant_info }
+  } 
+  else if (post.value.category === 'REVIEW' && post.value.review_info) {
+    editPostData.review = { 
+        ...post.value.review_info,
+        change_type: "WEIGHT"
+    }
+  }
+  
   isEditingPost.value = true
 }
-// 5. 게시글 관련 함수 (수정/삭제)
+
 const submitEditPost = async () => {
   if (!post.value) return;
   if (!editPostData.title.trim() || !editPostData.content.trim()) {
@@ -183,26 +337,30 @@ const submitEditPost = async () => {
   }
 
   try {
-    // ✅ 서버 검증을 통과하기 위해 데이터가 있는 것만 전송하거나 구조를 맞춤
     const payload = {
       title: editPostData.title,
       content: editPostData.content,
       category: post.value.category,
     };
 
-    // 데이터가 존재할 때만 포함 (null 대신 실제 객체 전송)
-    if (post.value.restaurant_info) payload.restaurant_info = post.value.restaurant_info;
-    if (post.value.review_info) payload.review_info = post.value.review_info;
-    if (post.value.question_info) payload.question_info = post.value.question_info;
+    if (post.value.category === 'RESTAURANT') {
+      payload.restaurant_info = editPostData.restaurant;
+    } 
+    else if (post.value.category === 'REVIEW') {
+      if (!editPostData.review.weight_diff) {
+         alert("체중 변화량을 입력해주세요.");
+         return;
+      }
+      payload.review_info = editPostData.review;
+    }
 
-    console.log("최종 전송 payload:", payload);
+    console.log("최종 수정 전송 데이터:", payload);
 
     await store.updatePost(postId, payload);
     
     isEditingPost.value = false;
     alert("게시글이 성공적으로 수정되었습니다.");
   } catch (error) {
-    // 상세 에러 내용을 더 자세히 출력해서 확인
     console.error("❌ 수정 실패 원인:", error.response?.data);
     alert("수정 실패: 입력 데이터를 확인해주세요.");
   }
@@ -212,17 +370,11 @@ const submitEditPost = async () => {
 const handleDeletePost = async () => {
   if (confirm("정말 이 게시물을 삭제하시겠습니까?")) {
     try {
-      // 1. 이동할 경로를 미리 변수에 저장 (삭제 후에는 post.value가 사라질 수 있음)
       const targetCategory = post.value?.category?.toLowerCase() || 'free';
-      
-      // 2. 삭제 실행
       await store.deletePost(postId);
-      
-      // 3. 성공 시 즉시 이동 (다른 요청이 가기 전에)
       alert("게시글이 삭제되었습니다.");
       router.push(`/community/${targetCategory}`);
     } catch (error) {
-      // 서버에서 이미 지워졌는데 404가 난 경우라면 에러로 처리하지 않음
       if (error.response?.status === 404) {
           router.push('/community');
           return;
@@ -233,14 +385,13 @@ const handleDeletePost = async () => {
   }
 }
 
-// 6. 댓글 관련 함수 (등록/수정/삭제)
 const submitComment = async () => {
   if (!newComment.value.trim()) return
   try {
     await store.createComment(postId, newComment.value)
     newComment.value = ""
   } catch (error) {
-    alert("댓글 등록 실패")
+    alert("로그인 후 이용해주세요.")
   }
 }
 
@@ -250,48 +401,16 @@ const startEditComment = (comment) => {
 }
 
 const submitEditComment = async (commentId) => {
-  // 1. 함수 호출 여부 확인
-  console.log("=== 댓글 수정 시작 ===");
-  console.log("전달받은 commentId:", commentId);
-  console.log("게시글 ID(postId):", postId);
-  console.log("수정할 내용(editCommentContent):", editCommentContent.value);
-
-  // 2. 유효성 검사 로그
   if (!editCommentContent.value || !editCommentContent.value.trim()) {
-    console.warn("내용이 비어있어 수정을 중단합니다.");
     alert("댓글 내용을 입력해주세요.");
     return;
   }
-
   try {
-    console.log("3. store.updateComment 호출 시도 중...");
-    
-    // API 호출
-    const result = await store.updateComment(postId, commentId, editCommentContent.value);
-    
-    console.log("4. 서버 응답 결과:", result);
-
-    // 성공 시 상태 초기화
+    await store.updateComment(postId, commentId, editCommentContent.value);
     editingCommentId.value = null;
-    console.log("5. 수정 모드 종료 완료");
-    
   } catch (error) {
-    // 🚨 에러 상세 출력
-    console.error("❌ 댓글 수정 중 에러 발생!");
-    
-    if (error.response) {
-      // 서버가 에러 코드를 반환한 경우 (400, 404, 405, 500 등)
-      console.error("서버 응답 에러 데이터:", error.response.data);
-      console.error("HTTP 상태 코드:", error.response.status);
-    } else if (error.request) {
-      // 요청은 보냈으나 응답을 아예 못 받은 경우 (네트워크 에러 등)
-      console.error("서버로부터 응답을 받지 못했습니다.");
-    } else {
-      // 코드 자체에 문제가 있는 경우 (오타 등)
-      console.error("에러 메시지:", error.message);
-    }
-    
-    alert("댓글 수정에 실패했습니다. 콘솔을 확인해주세요.");
+    console.error("❌ 댓글 수정 실패", error);
+    alert("댓글 수정에 실패했습니다.");
   }
 };
 
@@ -301,7 +420,6 @@ const removeComment = async (commentId) => {
   }
 }
 
-// 7. 기타 기능 (좋아요, 뒤로가기, 날짜)
 const handleLike = async () => {
   if (post.value) await store.toggleLike(post.value.id)
 }
@@ -315,26 +433,24 @@ const formatDate = (dateStr) => {
   return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일 ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`
 }
 
-// CommunityDetailPage.vue 의 onMounted 수정
 onMounted(async () => {
   try {
-    // 1. 일단 전체 목록을 불러오거나 단일 게시글 정보를 불러옵니다.
-    if (store.posts.length === 0) await store.fetchPosts();
-    
-    // 2. 불러온 뒤에도 현재 postId에 해당하는 글이 없다면?
     if (!post.value) {
-      alert("존재하지 않는 게시글입니다.");
-      router.push('/community'); // 또는 404 페이지로 이동
-      return;
+      await store.fetchPostDetail(postId)
     }
 
-    // 3. 글이 있을 때만 댓글 로드
-    await store.fetchComments(postId);
+    if (!post.value) {
+      alert("존재하지 않는 게시글입니다.")
+      router.push('/community')
+      return
+    }
+
+    await store.fetchComments(postId)
   } catch (error) {
-    console.error("데이터 로딩 중 에러:", error);
-    router.push('/community');
+    router.push('/community')
   }
-});
+})
+
 </script>
 
 <style scoped>
@@ -372,7 +488,7 @@ onMounted(async () => {
 .extra-info-section { margin-top: 40px; }
 .extra-card { border-radius: 24px; padding: 30px; margin-bottom: 20px; border: 1px solid #f1f5f9; }
 .extra-card.restaurant { background: #f8fafc; }
-.extra-card.review { background: #f0fdf4; border-color: #dcfce7; }
+
 .extra-header { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
 .extra-header h3 { font-size: 1.1rem; font-weight: 800; margin: 0; }
 .extra-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
@@ -380,12 +496,40 @@ onMounted(async () => {
 .info-item span { font-weight: 700; color: #1e293b; }
 .tag { color: #22c55e; }
 
-.review-stats { display: flex; gap: 16px; }
-.stat-box { flex: 1; padding: 16px; background: white; border-radius: 16px; text-align: center; }
-.stat-box.accent { background: #22c55e; color: white; }
-.stat-box.accent .stat-label { color: rgba(255,255,255,0.8); }
-.stat-label { font-size: 0.8rem; font-weight: 700; color: #94a3b8; display: block; margin-bottom: 4px; }
-.stat-value { font-size: 1.1rem; font-weight: 900; }
+/* ✅ 새로운 리뷰 UI (review-modern) */
+.extra-card.review-modern {
+  background: white; border: 1px solid #e2e8f0; box-shadow: 0 10px 30px rgba(0,0,0,0.03);
+  text-align: center; padding: 40px 30px;
+}
+
+.review-badges {
+  display: flex; justify-content: center; gap: 8px; margin-bottom: 30px;
+}
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 700;
+}
+.badge.period { background: #f1f5f9; color: #64748b; }
+.badge.type { background: #e0f2fe; color: #0284c7; }
+.badge .material-icons { font-size: 16px; }
+
+.weight-display {
+  display: flex; flex-direction: column; align-items: center; gap: 16px;
+}
+.weight-icon-circle {
+  width: 64px; height: 64px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 32px;
+}
+.weight-icon-circle.loss { background: #ecfdf5; color: #10b981; }
+.weight-icon-circle.gain { background: #fef2f2; color: #ef4444; }
+
+.weight-text-group { display: flex; flex-direction: column; align-items: center; }
+.label-text { font-size: 0.9rem; font-weight: 700; color: #94a3b8; margin-bottom: 4px; }
+.value-text { font-size: 3.5rem; font-weight: 900; line-height: 1; letter-spacing: -1px; }
+.value-text.loss-text { color: #10b981; }
+.value-text.gain-text { color: #ef4444; }
+.value-text .unit { font-size: 1.2rem; color: #94a3b8; font-weight: 700; margin-left: 4px; }
 
 /* --- 하단 버튼 액션 --- */
 .post-footer { margin-top: 50px; display: flex; justify-content: center; gap: 16px; padding-bottom: 40px; border-bottom: 1px solid #f1f5f9; }
@@ -437,22 +581,48 @@ onMounted(async () => {
 }
 .comment-delete-icon-btn:hover { background: #ef4444; color: #ffffff; border-color: #ef4444; }
 
-.empty-placeholder { text-align: center; padding: 60px 0; color: #cbd5e1; }
-.empty-bg { font-size: 3rem; margin-bottom: 12px; }
-
-/* 애니메이션 */
-.comment-list-enter-active, .comment-list-leave-active { transition: all 0.4s ease; }
-.comment-list-enter-from, .comment-list-leave-to { opacity: 0; transform: translateX(30px); }
-
-/* 게시글 수정 UI 스타일 */
-.edit-title-input {
-  width: 100%; font-size: 2.5rem; font-weight: 900; border: none;
-  border-bottom: 2px solid #22c55e; outline: none; padding: 10px 0; margin-bottom: 20px;
+/* ================= 수정 모드 UI 스타일 ================= */
+.edit-label {
+  display: block; font-size: 0.9rem; font-weight: 800; color: #94a3b8; margin-bottom: 6px;
 }
+.edit-title-input {
+  width: 100%; font-size: 2.2rem; font-weight: 900; border: none;
+  border-bottom: 2px solid #e2e8f0; outline: none; padding: 10px 0;
+  transition: 0.2s;
+}
+.edit-title-input:focus { border-bottom-color: #22c55e; }
+
+.edit-content-wrapper { margin-bottom: 20px; }
 .edit-content-textarea {
-  width: 100%; font-size: 1.15rem; line-height: 1.8; border: 1px solid #e2e8f0;
+  width: 100%; font-size: 1.1rem; line-height: 1.8; border: 1px solid #e2e8f0;
   border-radius: 12px; padding: 20px; outline: none; resize: none; background: #fcfdfd;
 }
+.edit-content-textarea:focus { border-color: #22c55e; }
+
+/* 식당 정보 수정 그리드 */
+.edit-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-top: 16px;
+}
+.input-group label {
+  display: block; font-size: 0.8rem; font-weight: 700; color: #94a3b8; margin-bottom: 4px;
+}
+.custom-input.small, .custom-select.small {
+  width: 100%; height: 42px; border: 1px solid #e2e8f0; border-radius: 10px;
+  padding: 0 12px; font-size: 0.9rem; outline: none; box-sizing: border-box;
+}
+.custom-input.small:focus, .custom-select.small:focus { border-color: #22c55e; }
+
+/* ✅ 숫자 입력창 화살표(Spinner) 제거 스타일 */
+.custom-input.no-spinner::-webkit-outer-spin-button,
+.custom-input.no-spinner::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.custom-input.no-spinner {
+  -moz-appearance: textfield;
+}
+
+.input-hint { font-size: 0.8rem; color: #94a3b8; margin-top: 12px; text-align: right; }
 
 /* 하단 버튼 그룹 */
 .author-actions { display: flex; gap: 10px; margin-left: auto; }
@@ -477,4 +647,6 @@ onMounted(async () => {
 .edit-btn-group { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
 .mini-save-btn { background: #22c55e; color: white; border: none; padding: 4px 12px; border-radius: 8px; font-weight: 700; cursor: pointer; }
 .mini-cancel-btn { background: #f1f5f9; color: #94a3b8; border: none; padding: 4px 12px; border-radius: 8px; font-weight: 700; cursor: pointer; }
+
+.empty-placeholder { text-align: center; padding: 60px 0; color: #cbd5e1; font-weight: 700; }
 </style>

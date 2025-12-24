@@ -1,161 +1,161 @@
+import { ref, computed } from "vue"
 import { defineStore } from "pinia"
 import axios from "axios"
 
-export const useAuthStore = defineStore("auth", {
-    state: () => ({
-        accessToken: localStorage.getItem("accessToken") || null,
-        isLoggedIn: !!localStorage.getItem("accessToken"),
-        user: JSON.parse(localStorage.getItem("user")) || null,
-    }),
+export const useAuthStore = defineStore("auth", () => {
+    /* ===============================
+       1️⃣ STATE
+    =============================== */
 
-    actions: {
-        // ----------------------------------------
-        // ⭐ 1. 로그인 + 토큰 저장
-        // ----------------------------------------
-        async fetchAndStoreToken(username, password) {
-            try {
-                const res = await axios.post(
-                    "http://localhost:8000/api/accounts/login/",
-                    { username, password }
-                )
+    // 토큰 (로컬스토리지 우선)
+    const token = ref(localStorage.getItem("accessToken") || null)
 
-                const token = res.data.access
-                this.accessToken = token
-                this.isLoggedIn = true
-                localStorage.setItem("accessToken", token)
+    // 유저 정보
+    const storedUser = localStorage.getItem("user")
+    const user = ref(storedUser ? JSON.parse(storedUser) : null)
 
-                // 🔥 로그인 후에는 항상 me API로 사용자 정보 조회
-                await this.fetchMyProfile()
+    /* ===============================
+       2️⃣ GETTERS
+    =============================== */
 
-                return true
-            } catch (error) {
-                console.error("로그인 실패:", error)
-                this.logOut()
-                return false
-            }
-        },
+    const isLoggedIn = computed(() => !!token.value)
+    const accessToken = computed(() => token.value)
 
-        // ----------------------------------------
-        // ⭐ 2. 내 프로필 조회 (🔥 핵심 추가)
-        // ----------------------------------------
-        async fetchMyProfile() {
-            if (!this.accessToken) return
+    /* ===============================
+       3️⃣ AXIOS 기본 헤더 유지
+    =============================== */
 
-            try {
-                const res = await axios.get(
-                    "http://localhost:8000/api/accounts/me/",
-                    { headers: this.getAuthHeader() }
-                )
+    if (token.value) {
+        axios.defaults.headers.common["Authorization"] = `Bearer ${token.value}`
+    }
 
-                this.user = res.data
-                localStorage.setItem("user", JSON.stringify(res.data))
-            } catch (error) {
-                console.error("프로필 조회 실패:", error)
+    /* ===============================
+       4️⃣ ACTIONS
+    =============================== */
 
-                // 토큰 만료 등 인증 문제면 로그아웃
-                if (error.response?.status === 401) {
-                    this.logOut()
-                }
-            }
-        },
+    // ✅ 공통 Authorization 헤더 반환 (🔥 핵심)
+    const getAuthHeader = () => {
+        if (!token.value) {
+            console.warn("⚠️ accessToken 없음")
+            return {}
+        }
+        return {
+            Authorization: `Bearer ${token.value}`,
+        }
+    }
 
-        // ----------------------------------------
-        // ⭐ 3. 로그아웃
-        // ----------------------------------------
-        logOut() {
-            this.accessToken = null
-            this.user = null
-            this.isLoggedIn = false
+    // 로그인 성공 처리
+    const loginSuccess = (newToken, newName, newUsername) => {
+        token.value = newToken
+        user.value = { name: newName, username: newUsername }
 
-            localStorage.removeItem("accessToken")
-            localStorage.removeItem("user")
-        },
+        localStorage.setItem("accessToken", newToken)
+        localStorage.setItem("user", JSON.stringify(user.value))
 
-        // ----------------------------------------
-        // ⭐ 4. 인증 헤더
-        // ----------------------------------------
-        getAuthHeader() {
-            return this.accessToken
-                ? { Authorization: `Bearer ${this.accessToken}` }
-                : {}
-        },
+        axios.defaults.headers.common["Authorization"] = `Bearer ${newToken}`
+    }
 
-        // ----------------------------------------
-        // ⭐ 5. 프로필 수정
-        // ----------------------------------------
-        // ----------------------------------------
-        // ⭐ 5. 프로필 수정
-        // ----------------------------------------
-        async updateProfile(payload) {
-            try {
-                // 1. 요청 직전 토큰 재확인 (state에 없으면 localStorage에서라도 가져옴)
-                const token = this.accessToken || localStorage.getItem("accessToken");
+    // 로그아웃
+    const logOut = () => {
+        token.value = null
+        user.value = null
 
-                if (!token) {
-                    throw new Error("인증 토큰이 없습니다. 다시 로그인해주세요.");
-                }
+        localStorage.removeItem("accessToken")
+        localStorage.removeItem("user")
 
-                const res = await axios.put(
-                    "http://localhost:8000/api/accounts/me/update/",
-                    payload,
-                    {
-                        headers: {
-                            Authorization: `Bearer ${token}`
-                        }
-                    }
-                );
+        delete axios.defaults.headers.common["Authorization"]
+    }
 
-                // 🔥 서버 기준으로 다시 동기화
-                await this.fetchMyProfile();
-                return res.data;
-
-            } catch (error) {
-                console.error("프로필 수정 에러 상세:", error.response);
-
-                // 2. 만약 401(토큰 만료/잘못됨)이면 로그아웃 처리
-                if (error.response?.status === 401) {
-                    alert("인증이 만료되었습니다. 다시 로그인해주세요.");
-                    this.logOut();
-                    // 필요하다면 여기서 router.push('/login')을 호출하거나 페이지를 새로고침 하세요.
-                    window.location.href = "/login";
-                }
-                throw error;
-            }
-        },
-
-        // ----------------------------------------
-        // ⭐ 6. 계정 정보 수정
-        // ----------------------------------------
-        async updateAccount(payload) {
-            const res = await axios.put(
-                "http://localhost:8000/api/accounts/me/account/",
-                payload,
-                { headers: this.getAuthHeader() }
+    // 로그인 요청
+    const fetchAndStoreToken = async (username, password) => {
+        try {
+            const res = await axios.post(
+                "http://localhost:8000/api/accounts/login/",
+                { username, password }
             )
 
-            await this.fetchMyProfile()
-            return res.data
-        },
+            const receivedToken =
+                res.data.key || res.data.token || res.data.access
+            const receivedName = res.data.name || username
 
-        // ----------------------------------------
-        // ⭐ 7. 회원 탈퇴
-        // ----------------------------------------
-        async withdraw() {
-            if (!this.accessToken) {
-                throw new Error("로그인 상태가 아닙니다.")
+            if (!receivedToken) {
+                console.error("❌ 토큰 없음:", res.data)
+                return false
             }
 
-            try {
-                await axios.delete(
-                    "http://localhost:8000/api/accounts/me/delete/",
-                    { headers: this.getAuthHeader() }
-                )
+            loginSuccess(receivedToken, receivedName, username)
+            return true
 
-                this.logOut()
-            } catch (error) {
-                console.error("회원탈퇴 실패:", error)
-                throw error
+        } catch (err) {
+            console.error("❌ 로그인 에러:", err)
+            if (err.response) {
+                console.error("📛 응답 데이터:", err.response.data)
             }
-        },
-    },
+            return false
+        }
+    }
+
+    // 회원 탈퇴
+    const withdraw = async () => {
+        try {
+            await axios.delete(
+                "http://localhost:8000/api/accounts/delete/",
+                { headers: getAuthHeader() }
+            )
+            logOut()
+        } catch (err) {
+            console.error("❌ 회원 탈퇴 실패:", err)
+            throw err
+        }
+    }
+
+    // 계정 정보 수정 (추후 구현)
+    const updateAccount = async (payload) => {
+        // TODO
+    }
+
+    /* ===============================
+       5️⃣ EXPORT
+    =============================== */
+
+    const updateProfile = async (payload) => {
+    try {
+        const res = await axios.patch(
+            "http://localhost:8000/api/accounts/update-profile/",
+            payload,
+            { headers: getAuthHeader() }
+        )
+
+        // 🔄 로컬 user 정보 갱신
+        user.value = {
+            ...user.value,
+            ...res.data,
+        }
+        localStorage.setItem("user", JSON.stringify(user.value))
+
+        return res.data
+    } catch (err) {
+        console.error("❌ 프로필 수정 실패:", err)
+        throw err
+    }
+    }
+
+    return {
+        // state
+        token,
+        user,
+
+        // getters
+        isLoggedIn,
+        accessToken,
+
+        // actions
+        getAuthHeader,
+        loginSuccess,
+        logOut,
+        fetchAndStoreToken,
+        withdraw,
+        updateAccount,
+        updateProfile,
+    }
 })

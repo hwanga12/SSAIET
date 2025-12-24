@@ -13,11 +13,21 @@ export const useCommunityStore = defineStore("community", {
     }),
 
     actions: {
-        // 1. 게시글 작성
-        async addPost(payload) {
+        // ✅ [유틸] 헤더 생성기: 토큰이 있으면 넣고, 없으면 빈 객체 반환
+        getHeaders() {
             const auth = useAuthStore()
+            if (auth.accessToken) {
+                return { headers: { Authorization: `Bearer ${auth.accessToken}` } }
+            }
+            return {} // 비로그인 요청 (헤더 없음)
+        },
+
+        // 1. 게시글 작성 (로그인 필수)
+        async addPost(payload) {
             this.isLoading = true
             try {
+                // 작성은 무조건 토큰이 필요하므로 직접 헤더 생성
+                const auth = useAuthStore()
                 const res = await axios.post(`${API_URL}/posts/`, payload, {
                     headers: { Authorization: `Bearer ${auth.accessToken}` },
                 })
@@ -31,19 +41,16 @@ export const useCommunityStore = defineStore("community", {
             }
         },
 
-        // ⭐ 2. 게시글 수정 (반응성 강화)
+        // 2. 게시글 수정 (로그인 필수)
         async updatePost(postId, payload) {
             const auth = useAuthStore()
             try {
                 const res = await axios.put(
                     `${API_URL}/posts/${postId}/`,
                     payload,
-                    {
-                        headers: { Authorization: `Bearer ${auth.accessToken}` },
-                    }
+                    { headers: { Authorization: `Bearer ${auth.accessToken}` } }
                 )
 
-                // ✅ Vue 3에서 배열 내부 객체 변경을 확실히 감지하도록 splice 사용
                 const idx = this.posts.findIndex(p => p.id === postId)
                 if (idx !== -1) {
                     this.posts.splice(idx, 1, res.data)
@@ -57,39 +64,36 @@ export const useCommunityStore = defineStore("community", {
             }
         },
 
-        // 3. 카테고리별 게시글 조회
+        // ✅ 3. 카테고리별 게시글 조회 (누구나 가능)
         async fetchPostsByCategory(category) {
-            const auth = useAuthStore()
             this.isLoading = true
             try {
+                // getHeaders()를 사용하여 비로그인 유저도 요청 가능하게 변경
                 const res = await axios.get(
                     `${API_URL}/category/${category.toLowerCase()}/`,
-                    { headers: { Authorization: `Bearer ${auth.accessToken}` } }
+                    this.getHeaders()
                 )
                 this.posts = res.data
             } catch (error) {
                 console.error("카테고리 로드 실패:", error)
-                this.handleAuthError(error)
+                // 조회 실패는 인증 에러 처리를 하지 않음 (또는 401이 아닐 때만 처리)
             } finally {
                 this.isLoading = false
             }
         },
 
-        // 4. 전체 게시글 조회
+        // ✅ 4. 전체 게시글 조회 (누구나 가능)
         async fetchPosts() {
-            const auth = useAuthStore()
-            if (!auth.accessToken) return
             try {
-                const res = await axios.get(`${API_URL}/posts/`, {
-                    headers: { Authorization: `Bearer ${auth.accessToken}` },
-                })
+                // getHeaders() 사용 -> 토큰 없으면 그냥 요청 보냄
+                const res = await axios.get(`${API_URL}/posts/`, this.getHeaders())
                 this.posts = res.data
             } catch (error) {
-                this.handleAuthError(error)
+                console.error("전체 게시글 로드 실패:", error)
             }
         },
 
-        // 5. 좋아요 토글
+        // 5. 좋아요 토글 (로그인 필수)
         async toggleLike(postId) {
             const auth = useAuthStore()
             try {
@@ -110,17 +114,17 @@ export const useCommunityStore = defineStore("community", {
                     }
                 }
             } catch (error) {
+                // 401 에러(비로그인)일 경우 처리
                 this.handleAuthError(error)
             }
         },
 
-        // 6. 댓글 조회
+        // ✅ 6. 댓글 조회 (누구나 가능)
         async fetchComments(postId) {
-            const auth = useAuthStore()
             try {
                 const res = await axios.get(
                     `${API_URL}/posts/${postId}/comments/`,
-                    { headers: { Authorization: `Bearer ${auth.accessToken}` } }
+                    this.getHeaders()
                 )
                 this.comments = res.data
             } catch (error) {
@@ -128,7 +132,7 @@ export const useCommunityStore = defineStore("community", {
             }
         },
 
-        // 7. 댓글 작성
+        // 7. 댓글 작성 (로그인 필수)
         async createComment(postId, content) {
             const auth = useAuthStore()
             try {
@@ -144,25 +148,22 @@ export const useCommunityStore = defineStore("community", {
             }
         },
 
-        // ✅ 인자를 3개 받도록 수정: postId, commentId, content
+        // 8. 댓글 수정 (로그인 필수)
         async updateComment(postId, commentId, content) {
             const auth = useAuthStore()
             try {
-                console.log("스토어 내부 데이터 확인:", { postId, commentId, content })
-
                 const res = await axios.put(
-                    `${API_URL}/comments/${commentId}/`, // commentId(14)가 여기로 가야 함
-                    { content: content },               // content("222222")가 여기로 가야 함
+                    `${API_URL}/comments/${commentId}/`,
+                    { content: content },
                     { headers: { Authorization: `Bearer ${auth.accessToken}` } }
                 )
 
-                // 로컬 상태 반영
                 const idx = this.comments.findIndex(c => c.id === commentId)
                 if (idx !== -1) {
                     this.comments.splice(idx, 1, res.data)
                 }
 
-                return res.data; // ✅ 이걸 해야 콘솔에 undefined가 안 뜹니다!
+                return res.data
             } catch (error) {
                 console.error("댓글 수정 실패:", error)
                 this.handleAuthError(error)
@@ -170,7 +171,7 @@ export const useCommunityStore = defineStore("community", {
             }
         },
 
-        // 9. 댓글 삭제
+        // 9. 댓글 삭제 (로그인 필수)
         async deleteComment(postId, commentId) {
             const auth = useAuthStore()
             try {
@@ -184,7 +185,7 @@ export const useCommunityStore = defineStore("community", {
             }
         },
 
-        // 10. 게시글 삭제
+        // 10. 게시글 삭제 (로그인 필수)
         async deletePost(postId) {
             const auth = useAuthStore()
             try {
@@ -193,18 +194,12 @@ export const useCommunityStore = defineStore("community", {
                     { headers: { Authorization: `Bearer ${auth.accessToken}` } }
                 )
 
-                console.log("1. 서버 응답 성공:", res.status);
-
-                // ✅ 만약 this.posts가 로드되지 않은 상태라면 filter에서 에러가 납니다.
                 if (this.posts && this.posts.length > 0) {
                     this.posts = this.posts.filter(p => p.id !== postId)
                 }
-
-                console.log("2. 로컬 상태 업데이트 완료");
-                return res; // 성공 리턴
+                return res
             } catch (error) {
-                // 실제 서버 에러인지, 위 로직(filter 등)에서 난 에러인지 구분
-                console.error("삭제 함수 내부에서 문제 발생:", error);
+                console.error("게시글 삭제 실패:", error)
                 throw error
             }
         },
@@ -212,12 +207,16 @@ export const useCommunityStore = defineStore("community", {
         // 11. 인증 에러 공통 처리
         handleAuthError(error) {
             if (error.response?.status === 401) {
-                const auth = useAuthStore()
-                alert("세션이 만료되었습니다. 다시 로그인해주세요.")
-                auth.logOut()
-                window.location.href = "/login"
+                // 로그인하지 않은 상태에서 '좋아요'나 '작성' 등을 시도했을 때
+                alert("로그인이 필요한 기능입니다.")
+                // 굳이 로그아웃 시키지 않고 로그인 페이지로 보낼 수도 있음
+                // const auth = useAuthStore()
+                // auth.logOut()
+                // window.location.href = "/login"
             }
         },
+
+        // 12. 내 댓글 조회 (로그인 필수)
         async fetchMyComments() {
             const auth = useAuthStore()
             try {
@@ -225,11 +224,33 @@ export const useCommunityStore = defineStore("community", {
                     headers: { Authorization: `Bearer ${auth.accessToken}` },
                 })
                 this.myComments = res.data
-                console.log("내 댓글 목록 로드 성공:", res.data)
             } catch (error) {
                 console.error("내 댓글 로드 실패:", error)
                 this.handleAuthError(error)
             }
         },
+        // ✅ 게시글 단건 조회 (상세 페이지용)
+        async fetchPostDetail(postId) {
+        try {
+            const res = await axios.get(
+            `${API_URL}/posts/${postId}/`,
+            this.getHeaders()
+            )
+
+            const post = res.data
+
+            // store.posts에 없으면 추가
+            const exists = this.posts.find(p => p.id === post.id)
+            if (!exists) {
+            this.posts.push(post)
+            }
+
+            return post
+        } catch (error) {
+            console.error("게시글 단건 조회 실패:", error)
+            throw error
+        }
+        }
+
     },
 })

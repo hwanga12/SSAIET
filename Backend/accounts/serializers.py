@@ -1,10 +1,11 @@
-# accounts/serializers.py
 from rest_framework import serializers
 from .models import User
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
-from rest_framework import serializers
 
+# ============================================================
+# 1) 회원가입용 Serializer
+# ============================================================
 class UserCreateSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
 
@@ -12,33 +13,24 @@ class UserCreateSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             'username',
-            'email',
             'password',
             'name',
         ]
 
-    # 🔥 여기 추가 (핵심)
     def validate_password(self, value):
         try:
             validate_password(value)
         except ValidationError as e:
-            # Django ValidationError → DRF ValidationError로 변환
             raise serializers.ValidationError(e.messages)
         return value
 
     def create(self, validated_data):
-        user = User(
-            username=validated_data['username'],
-            email=validated_data['email'],
-            name=validated_data.get('name'),
-        )
-        user.set_password(validated_data['password'])
-        user.save()
-        return user
+        # UserManager의 create_user를 호출하여 비밀번호 해싱을 자동으로 처리합니다.
+        return User.objects.create_user(**validated_data)
 
 
 # ============================================================
-# 2) 유저 정보 조회용 Serializer (UserSerializer)
+# 2) 유저 정보 조회용 Serializer
 # ============================================================
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -46,8 +38,7 @@ class UserSerializer(serializers.ModelSerializer):
         fields = [
             'id',
             'username',
-            'email',
-            'name',                   # 🔥 name 추가
+            'name',
             'height',
             'current_weight',
             'target_weight',
@@ -60,13 +51,13 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 # ============================================================
-# 3) 프로필 업데이트 Serializer (ProfileUpdateSerializer)
+# 3) 프로필 업데이트 Serializer (신체 정보 등)
 # ============================================================
 class ProfileUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'name',                   # 🔥 name도 프로필 수정 가능
+            'name',
             'height',
             'current_weight',
             'target_weight',
@@ -77,26 +68,28 @@ class ProfileUpdateSerializer(serializers.ModelSerializer):
             'allergies',
         ]
 
+
+# ============================================================
+# 4) 계정 정보 업데이트 Serializer (아이디, 비밀번호)
+# ============================================================
 class AccountUpdateSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=False)
 
     class Meta:
         model = User
-        fields = ['username', 'email', 'password']
+        fields = ['username', 'password']
 
     def validate_password(self, value):
-        validate_password(value)
+        if value:
+            validate_password(value)
         return value
 
     def update(self, instance, validated_data):
-        if 'username' in validated_data:
-            instance.username = validated_data['username']
+        instance.username = validated_data.get('username', instance.username)
 
-        if 'email' in validated_data:
-            instance.email = validated_data['email']
-
-        if 'password' in validated_data and validated_data['password']:
-            instance.set_password(validated_data['password'])
+        password = validated_data.get('password')
+        if password:
+            instance.set_password(password)
 
         instance.save()
         return instance
