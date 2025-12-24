@@ -84,4 +84,6 @@ class WeightChangePrediction(models.Model):
     date = models.IntegerField()
     predicted_weight_change = models.FloatField()
     progress_to_target = models.FloatField()
+    estimated_weight = models.FloatField()   # ⭐ 추가
+    progress_to_target = models.FloatField() # ⭐ 추가
     created_at = models.DateTimeField(auto_now_add=True)

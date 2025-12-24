@@ -7,7 +7,7 @@ from meal.ml.model import WeightChangePredictor
 from django.conf import settings
 import os
 
-INPUT_SIZE = 12
+INPUT_SIZE = 9
 
 MODEL_PATH = os.path.join(settings.BASE_DIR, "meal/ml/weight_model.pt")
 SCALER_PATH = os.path.join(settings.BASE_DIR, "meal/ml/scaler.pkl")

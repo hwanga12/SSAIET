@@ -18,7 +18,8 @@ from rest_framework.decorators import api_view, permission_classes, authenticati
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.http import JsonResponse
-from datetime import datetime
+from datetime import datetime, timedelta
+from django.db.models import Sum
 
 
 User = get_user_model()
@@ -300,7 +301,7 @@ def recommend_dinner(request):
     카드 뉴스 형태로 줄바꿈 잘 해서 문단 나눠서 추천해줘.
     반드시 JSON 형식으로만 응답하세요.
     설명, 문장, 마크다운, 코드블록 없이
-    아래 형식 그대로 반환하세요.
+    아래 형식 그대로 반환하지만 꼭 다양한 메뉴를 현실 가능한 선에서 추천해.
 
     응답 형식(JSON):
     {{
@@ -539,67 +540,115 @@ def nutrition_day_detail(request, date):
     serializer = NutritionDayDetailSerializer(result)
     return Response(serializer.data)
 
-
-
-
-
-# from rest_framework.decorators import api_view
-# from rest_framework.response import Response
-# from meal.ml.inference import predict_weight_change
-
-
-# from yourapp.models import User
 import torch
 
-@api_view(['POST'])
+RECOMMENDED_DINNER_CAL = 600  # 안 먹은 날 가정 칼로리
+
+
+@api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def predict_weight_change_view(request):
     user = request.user
-    starting_weight = user.current_weight
-    selected_meals = UserSelectedMeal.objects.filter(user=user)
 
-    total_calories = 0
-    total_protein = 0
-    total_carbs = 0
-    total_fat = 0
+    # =========================
+    # 1️⃣ 기준 날짜 (최근 30일)
+    # =========================
+    today = datetime.now().date()
+    start_date = today - timedelta(days=30)
 
-    for sm in selected_meals:
-        foods = sm.meal.mealfood_set.select_related("food")
-        for f in foods:
-            total_calories += f.food.calorie
-            total_protein += f.food.protein
-            total_carbs += f.food.carbohydrate
-            total_fat += f.food.fat
+    # =========================
+    # 2️⃣ 기준 체중 (고정)
+    # =========================
+    baseline_weight = user.current_weight
 
-    # 진척도 계산
-    weight_diff = user.current_weight - user.target_weight
-    progress_to_target = ((user.target_weight - user.current_weight) / (user.target_weight - starting_weight)) * 100
+    # =========================
+    # 3️⃣ 날짜별 섭취 칼로리 초기화
+    #    (안 먹은 날 = 권장 칼로리)
+    # =========================
+    daily_calories = {
+        (start_date + timedelta(days=i)): RECOMMENDED_DINNER_CAL
+        for i in range(30)
+    }
 
+    # =========================
+    # 4️⃣ 실제 먹은 저녁만 반영
+    # =========================
+    dinners = DinnerRecommendation.objects.filter(
+        user=user,
+        created_at__date__gte=start_date,
+        is_eaten=True
+    ).select_related("user_selected_meal__meal")
+
+    for dinner in dinners:
+        meal = dinner.user_selected_meal.meal
+        calories = sum(
+            mf.food.calorie
+            for mf in meal.mealfood_set.select_related("food")
+        )
+        daily_calories[dinner.created_at.date()] = calories
+
+    # =========================
+    # 5️⃣ 최근 30일 평균 섭취 칼로리
+    # =========================
+    avg_calories = sum(daily_calories.values()) / 30
+
+    # =========================
+    # 6️⃣ ML 입력 (train.py와 동일)
+    # =========================
     feature_list = [
         user.age,
         1 if user.gender == "M" else 0,
         user.height,
-        user.current_weight,
+        baseline_weight,
         user.target_weight,
         user.muscle_mass,
         user.body_fat,
-        total_calories,
-        total_protein,
-        total_carbs,
-        total_fat,
-        selected_meals.count()
+        avg_calories,
+        30,  # 최근 30일
     ]
 
-    predicted = predict_weight_change(feature_list)
+    # =========================
+    # 7️⃣ ML 예측 (30일 후 변화량)
+    # =========================
+    predicted_delta_30d = predict_weight_change(feature_list)
 
+    # ⭐ 현실성 클램프 (선택이지만 강력 추천)
+    predicted_delta_30d = max(min(predicted_delta_30d, 5.0), -5.0)
+
+    predicted_weight_30d = baseline_weight + predicted_delta_30d
+
+    # =========================
+    # 8️⃣ 진척도 계산 (핵심)
+    # =========================
+    if baseline_weight == user.target_weight:
+        progress = 100.0
+    else:
+        progress = (
+            (baseline_weight - predicted_weight_30d)
+            / (baseline_weight - user.target_weight)
+        ) * 100
+
+    progress = max(0, min(progress, 100))
+
+    # =========================
+    # 9️⃣ 저장 (히스토리용)
+    # =========================
     WeightChangePrediction.objects.create(
         user=user,
-        date=int(datetime.now().strftime("%Y%m%d")),
-        predicted_weight_change=predicted,
-        progress_to_target=progress_to_target  # 진척도 저장
+        date=int(today.strftime("%Y%m%d")),
+        predicted_weight_change=predicted_delta_30d,
+        estimated_weight=predicted_weight_30d,
+        progress_to_target=progress,
     )
 
+    # =========================
+    # 🔟 응답
+    # =========================
+    
     return Response({
-        "predicted_weight_change": predicted,
-        "progress_to_target": progress_to_target
-    })
+    "current_weight": round(baseline_weight, 1),
+    "target_weight": round(user.target_weight, 1),
+    "predicted_weight_30d": round(predicted_weight_30d, 1),
+    "predicted_weight_change": round(predicted_delta_30d, 2),
+    "progress_to_target": round(progress, 1),
+})
