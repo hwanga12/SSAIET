@@ -15,6 +15,16 @@
           <span class="material-icons">calendar_month</span>
           <span class="nav-text">영양 캘린더</span>
         </button>
+
+          <!-- ✅ 체중 변화 예측 -->
+        <button
+          class="nav-link prediction-link"
+          @click="router.push('/weight-prediction')"
+        >
+          <span class="material-icons">insights</span>
+          <span class="nav-text">체중 예측</span>
+        </button>
+              
         <button class="nav-link" @click="router.push('/community')">
           <span class="material-icons">forum</span>
           <span class="nav-text">커뮤니티</span>
@@ -24,6 +34,7 @@
           <span class="material-icons">map</span>
           <span class="nav-text">주변 식당</span>
         </button>
+
       </nav>
     </div>
 
@@ -425,5 +436,7 @@ const logout = () => {
 .logo-img {
   flex-shrink: 0;
 }
+
+
 
 </style>

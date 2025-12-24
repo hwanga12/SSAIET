@@ -54,7 +54,7 @@ const routes = [
   path: "/weight-prediction",
   component: WeightPredictionPage,
   meta: { requiresAuth: true },
-},
+  },
 
   // ==========================
   // 🌱 Community (수정된 섹션)

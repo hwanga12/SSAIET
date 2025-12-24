@@ -52,6 +52,11 @@
             <span class="material-icons">settings</span>
             <span>내 정보 수정하기</span>
           </button>
+          <button class="action-btn prediction-btn" @click="goWeightPrediction">
+          <span class="material-icons">insights</span>
+          <span>체중 변화 예측</span>
+        </button>
+          
         </div>
       </template>
 
@@ -73,6 +78,9 @@ const props = defineProps({
 const router = useRouter()
 const goEdit = () => router.push("/profile/edit")
 const goAccountEdit = () => router.push("/account/edit")
+
+const goWeightPrediction = () => router.push("/weight-prediction")
+
 
 // 부모 컴포넌트로 버튼 클릭 이벤트를 보냄
 defineEmits(['account-edit', 'profile-edit'])
@@ -198,4 +206,17 @@ const genderImage = computed(() => {
   background: #f1f5f9;
   border-color: #cbd5e1;
 }
+
+.prediction-btn {
+  background: #eef2ff;
+  color: #4338ca;
+  border: 1px solid #c7d2fe;
+}
+
+.prediction-btn:hover {
+  background: #6366f1;
+  color: white;
+  box-shadow: 0 8px 15px rgba(99, 102, 241, 0.25);
+}
+
 </style>
