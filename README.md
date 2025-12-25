@@ -146,7 +146,7 @@
 
 | 로그인                  | 회원가입                  |
 | ----------------------- | ------------------------- |
-| ![login](./pic/login.png) | ![signup](./pic/signup.png) |
+| ![login](./pic/login.PNG) | ![signup](./pic/signup.PNG) |
 
 ---
 
@@ -154,7 +154,7 @@
 
 | 메인                   | 점심 상세              |
 | ---------------------- | ---------------------- |
-| ![main1](./pic/main.png) | ![main2](./pic/meal.png) |
+| ![main1](./pic/main.PNG) | ![main2](./pic/meal.PNG) |
 
 ---
 
@@ -162,7 +162,7 @@
 
 | 추천 결과                  |
 | -------------------------- |
-| ![dinner1](./pic/dinner.png) |
+| ![dinner1](./pic/dinner.PNG) |
 
 ---
 
@@ -170,7 +170,7 @@
 
 | 캘린더                          | 캘린더 상세                     |
 | ------------------------------- | ------------------------------- |
-| ![calendar1](./pic/calendar2.png) | ![calendar2](./pic/calendar1.png) |
+| ![calendar1](./pic/calendar2.PNG) | ![calendar2](./pic/calendar1.PNG) |
 
 ---
 
@@ -178,7 +178,7 @@
 
 | 지도 보기                  |
 | -------------------------- |
-| ![map1](./pic/nearstore.png) |
+| ![map1](./pic/nearstore.PNG) |
 
 ---
 
@@ -186,7 +186,7 @@
 
 | 진척도                     |
 | -------------------------- |
-| ![weight1](./pic/weight.png) |
+| ![weight1](./pic/weight.PNG) |
 
 ---
 
@@ -194,7 +194,7 @@
 
 | 게시글 목록                      |
 | -------------------------------- |
-| ![community1](./pic/community.png) |
+| ![community1](./pic/community.PNG) |
 
 ---
 
