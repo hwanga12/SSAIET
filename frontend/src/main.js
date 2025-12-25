@@ -2,7 +2,7 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
-import axios from 'axios'   // ⭐ 추가
+import axios from 'axios'
 
 // ==========================
 // 🔐 axios JWT 설정 (핵심)
@@ -25,10 +25,7 @@ axios.interceptors.request.use(
 const app = createApp(App)
 const pinia = createPinia()
 
-// 🔥 pinia 먼저
+
 app.use(pinia)
-
-// 🔥 router 다음
 app.use(router)
-
 app.mount('#app')

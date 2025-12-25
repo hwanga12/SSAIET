@@ -120,7 +120,7 @@ const performSearch = () => {
   // 검색 시에는 지도 중심 기준으로 검색하거나, 멀캠 중심으로 검색 (여기선 멀캠 중심 유지)
   const options = {
     location: new kakao.maps.LatLng(CAMPUS_POS.lat, CAMPUS_POS.lng),
-    radius: 1000, // 검색은 반경을 좀 더 넓게 1km
+    radius: 1000,
     sort: kakao.maps.services.SortBy.DISTANCE 
   };
   ps.keywordSearch(searchKeyword.value, searchCB, options);

@@ -50,7 +50,7 @@
 import { ref } from "vue"
 import { useRouter, onBeforeRouteLeave } from "vue-router"
 import { useAuthStore } from "@/stores/auth"
-import ProfileForm from "@/components/auth/ProfileForm.vue" // 경로 확인 필요
+import ProfileForm from "@/components/auth/ProfileForm.vue"
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -59,17 +59,17 @@ const isSubmitted = ref(false)
 // ⭐ [핵심] 페이지 이탈 방지 가드
 onBeforeRouteLeave((to, from, next) => {
   if (isSubmitted.value) {
-    next() // 저장 완료 시 통과
+    next()
   } else {
     const leaveWarning = window.confirm(
       "잠시만요! 😢 지금 프로필 설정을 중단하시면 서비스를 이용하실 수 없어요.\n정말로 나중에 하시겠어요? (지금 나가시면 로그아웃됩니다.)"
     )
     
     if (leaveWarning) {
-      authStore.logOut() // 이탈 시 로그아웃 처리
+      authStore.logOut()
       next()
     } else {
-      next(false) // 취소 시 잔류
+      next(false)
     }
   }
 })

@@ -98,7 +98,6 @@ const runPrediction = async () => {
   loading.value = true;
   try {
     const res = await axios.post("/meal/predict-weight/");
-    // 백엔드 필드명에 맞춰 매핑 (API 응답 필드 확인 필요)
     currentWeight.value = res.data.current_weight;
     targetWeight.value = res.data.target_weight;
     predictedWeight.value = res.data.predicted_weight_30d;

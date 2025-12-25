@@ -23,7 +23,7 @@
 .error-code {
   font-size: 8rem;
   font-weight: 900;
-  color: #22c55e; /* 기존 테마 컬러 */
+  color: #22c55e;
   line-height: 1;
   margin-bottom: 20px;
   opacity: 0.2;

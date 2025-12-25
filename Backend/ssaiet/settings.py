@@ -19,8 +19,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(os.path.join(BASE_DIR, ".env"))
 GMS_KEY = os.getenv("GMS_OPENAI_KEY")
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-rq%_8n2df&k-xc5z8%f&^53y2%r8%y=d*m(@)*@!85q-$d)09f'
@@ -146,8 +144,8 @@ SESSION_COOKIE_SECURE = False
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework_simplejwt.authentication.JWTAuthentication', # 👈 변경
-        # 'rest_framework.authentication.SessionAuthentication', # 세션은 필요하면 남겨둡니다.
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        
     ]
 }
 
@@ -157,7 +155,6 @@ from datetime import timedelta
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(hours=6),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
-    # ... 기타 JWT 설정 ...
 }
 
 from corsheaders.defaults import default_headers

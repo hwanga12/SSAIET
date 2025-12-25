@@ -18,7 +18,7 @@ urlpatterns = [
     # 식단
     path('meal/', include('meal.urls')),
 
-    # ✅ 커뮤니티 (이 줄 추가!!)
+    # ✅ 커뮤니티
     path('api/community/', include('community.urls')),
     
 ]

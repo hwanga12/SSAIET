@@ -1,7 +1,6 @@
 from django.db import models
 from django.conf import settings
 
-# Create your models here.
 # models.py
 class Meal(models.Model):
     date = models.IntegerField()
@@ -84,6 +83,6 @@ class WeightChangePrediction(models.Model):
     date = models.IntegerField()
     predicted_weight_change = models.FloatField()
     progress_to_target = models.FloatField()
-    estimated_weight = models.FloatField()   # ⭐ 추가
-    progress_to_target = models.FloatField() # ⭐ 추가
+    estimated_weight = models.FloatField()
+    progress_to_target = models.FloatField()
     created_at = models.DateTimeField(auto_now_add=True)

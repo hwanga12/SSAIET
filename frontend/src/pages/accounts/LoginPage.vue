@@ -131,18 +131,16 @@ const handleLogin = async () => {
       password: password.value,
     })
 
-    // ✅ 여기가 핵심 수정 부분입니다!
-    // 직접 값을 대입하지 말고, 스토어의 액션(함수)을 호출해야 반응성이 작동합니다.
+  
+
     authStore.loginSuccess(
       res.data.access,    // 토큰
       res.data.name,      // 이름
       res.data.username   // 아이디
     )
-
-    // (옵션) 만약 백엔드에서 주는 추가 정보(키/몸무게 등)를 user 객체에 더 넣고 싶다면
-    // loginSuccess 호출 직후에 user 값을 덮어쓰세요.
+    
     authStore.user = {
-      ...authStore.user, // 기존 name, username 유지
+      ...authStore.user,
       email: res.data.email,
       height: res.data.height,
       current_weight: res.data.current_weight,

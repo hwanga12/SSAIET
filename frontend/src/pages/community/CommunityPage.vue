@@ -139,7 +139,7 @@ const goCreate = () => {
   min-height: 100vh;
   background-color: #fcfdfd;
   position: relative;
-  overflow-x: auto; /* 🔥 가로 스크롤 허용 */
+  overflow-x: auto;
 }
 
 .bg-decoration {

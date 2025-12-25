@@ -19,7 +19,7 @@ const routes = [
   { path: "/", name: "Main", component: MainPage },
   { path: "/login", name: "Login", component: LoginPage },
   { path: "/signup", name: "Signup", component: SignUpPage },
-  // router/index.js
+
   {
     path: "/calendar",
     component: () => import("@/pages/calendar/CalendarPage.vue"),
@@ -79,15 +79,13 @@ const routes = [
     path: "/community/write",
     name: "community-write",
     component: CommunityWritePage,
-    // meta: { requiresAuth: true },
   },
 
   // 4. 게시글 상세
   {
-    path: "/community/detail/:id", // 주소가 겹치지 않게 detail을 넣어주는 것이 안전함
+    path: "/community/detail/:id",
     name: "community-detail",
     component: CommunityDetailPage,
-    // meta: { requiresAuth: true },
   },
 
   {
@@ -120,8 +118,6 @@ router.beforeEach(async (to, from, next) => {
     return next({ name: 'Login' })
   }
 
-  // 기존의 '무조건 리다이렉트' 로직을 제거하거나 주석 처리합니다.
-  // 사용자가 메인으로 가고 싶다면 일단 보내줍니다.
   next()
 })
 

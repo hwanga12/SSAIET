@@ -89,7 +89,6 @@
 </template>
 
 <script setup>
-/* 로직 100% 보존 */
 import { ref, computed } from "vue"
 
 const props = defineProps({

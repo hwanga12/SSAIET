@@ -267,7 +267,7 @@ const goHome = () => router.push("/");
   gap: 6px;
   cursor: pointer;
   transition: all 0.2s;
-  margin-top: 12px; /* 간격 조정 */
+  margin-top: 12px;
 }
 .home-btn:hover {
   background: #f8fafc;

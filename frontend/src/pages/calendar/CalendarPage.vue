@@ -113,8 +113,6 @@ const closeModal = () => {
 
 // 식사 여부 업데이트 후 UI 갱신
 const handleEatUpdate = async (status) => {
-  // 실제 DB 업데이트는 각 프로젝트의 store 액션에 따라 다를 수 있습니다.
-  // 업데이트 후 다시 데이터를 불러옵니다.
   await calendarStore.fetchMonth(year.value, month.value)
   if (calendarStore.dayDetail?.date) {
     await calendarStore.fetchDayDetail(calendarStore.dayDetail.date)

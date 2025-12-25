@@ -11,6 +11,5 @@ urlpatterns = [
     path("mypage/", views.mypage),
     path("update-profile/", views.update_profile),
     path("delete/", views.delete_account),
-    # path("me/update/", views.update_profile),
 
 ]

@@ -207,12 +207,8 @@ export const useCommunityStore = defineStore("community", {
         // 11. 인증 에러 공통 처리
         handleAuthError(error) {
             if (error.response?.status === 401) {
-                // 로그인하지 않은 상태에서 '좋아요'나 '작성' 등을 시도했을 때
                 alert("로그인이 필요한 기능입니다.")
-                // 굳이 로그아웃 시키지 않고 로그인 페이지로 보낼 수도 있음
-                // const auth = useAuthStore()
-                // auth.logOut()
-                // window.location.href = "/login"
+                
             }
         },
 
@@ -239,7 +235,6 @@ export const useCommunityStore = defineStore("community", {
 
             const post = res.data
 
-            // store.posts에 없으면 추가
             const exists = this.posts.find(p => p.id === post.id)
             if (!exists) {
             this.posts.push(post)

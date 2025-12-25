@@ -36,7 +36,6 @@
 </template>
 
 <script setup>
-/* 로직 100% 동일 */
 import { onMounted } from "vue"
 import { useAuthStore } from "@/stores/auth"
 import { useRouter, useRoute } from "vue-router"

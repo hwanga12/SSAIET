@@ -6,8 +6,8 @@ const API_URL = "http://localhost:8000"
 
 export const useMealCalendarStore = defineStore("mealCalendar", {
     state: () => ({
-        monthData: [],      // 월 캘린더 요약
-        dayDetail: null,    // 날짜 상세
+        monthData: [],
+        dayDetail: null,
         isLoading: false,
         error: null,
     }),
